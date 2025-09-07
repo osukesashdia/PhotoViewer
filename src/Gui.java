@@ -1,25 +1,32 @@
 import javax.swing.*;
 import java.awt.*;
 
-public class GUI {
+public class Gui {
     private JFrame frame;
     private JPanel mainPanel;
     private JLabel statusLabel;
+    private JPanel viewPanel;
+    private JLabel imageLabel;
 
     public static void main(String[] args) {
-        var PhotoViewer = new GUI();
-        PhotoViewer.setGUI();
+        var photoViewer = new Gui();
+        photoViewer.setGUI();
     }
 
     private void setGUI(){
         frame = new JFrame("PhotoViewer");
         mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
+        viewPanel = new JPanel();
+
+
+        var icon = new ImageIcon("src/shishito.jpg");
+        imageLabel = new JLabel(icon);
 
         setStatusLabel();
         setMenuBar();
         setToolBar();
-        set_view_area();
+        setViewArea();
 
         frame.setSize(800, 1000);
         frame.add(mainPanel);
@@ -39,6 +46,7 @@ public class GUI {
         var quitItem = new JMenuItem("Quit");
         var fileChooser = new JFileChooser();
 
+
         importItem.addActionListener(e -> {fileChooser.showOpenDialog(frame);});
         deleteItem.addActionListener(e -> {statusLabel.setText(deleteItem.getText());});
         quitItem.addActionListener(e -> {System.exit(0);});
@@ -51,11 +59,21 @@ public class GUI {
         var browseItem = new JRadioButtonMenuItem("Browse");
         var viewGroup = new ButtonGroup();
 
+
         viewGroup.add(photoItem);
         viewGroup.add(browseItem);
 
-        photoItem.addActionListener(e -> {statusLabel.setText(photoItem.getText());});
-        browseItem.addActionListener(e -> {statusLabel.setText(browseItem.getText());});
+        photoItem.addActionListener(e -> {
+            viewPanel.add(imageLabel);
+            viewPanel.revalidate();
+            viewPanel.repaint();
+        });
+        browseItem.addActionListener(e -> {
+            statusLabel.setText(browseItem.getText());
+            viewPanel.removeAll();                     // remove any images/components
+            viewPanel.revalidate();                    // refresh layout
+            viewPanel.repaint();
+        });
         viewMenu.add(photoItem);
         viewMenu.add(browseItem);
 
@@ -66,23 +84,21 @@ public class GUI {
     }
 
     private void setToolBar(){
-        var category_selector1 = new JToggleButton("People");
-        var category_selector2 = new JToggleButton("Foods");
-        var tool_bar_panel = new JPanel();
+        var toolBarPanel = new JPanel();
+        String[] categories = {"People", "Foods"};
 
-        category_selector1.addActionListener(e -> {statusLabel.setText(category_selector1.getText());});
-        category_selector2.addActionListener(e -> {statusLabel.setText(category_selector2.getText());});
+        for(String category : categories){
+            var categoryToggleButton = new JToggleButton(category);
+            categoryToggleButton.addActionListener(e -> {statusLabel.setText(categoryToggleButton.getText());});
+            toolBarPanel.add(categoryToggleButton);
+        }
 
-        tool_bar_panel.add(category_selector1);
-        tool_bar_panel.add(category_selector2);
-        tool_bar_panel.setBackground(Color.LIGHT_GRAY);
-        mainPanel.add(tool_bar_panel,  BorderLayout.NORTH);
+        toolBarPanel.setBackground(Color.LIGHT_GRAY);
+        mainPanel.add(toolBarPanel,  BorderLayout.NORTH);
     }
 
-    private void set_view_area(){
-        var view_panel = new JPanel();
-        view_panel.setBackground(Color.BLACK);
-        mainPanel.add(view_panel, BorderLayout.CENTER);
-
+    private void setViewArea(){
+        viewPanel.add(imageLabel);
+        mainPanel.add(viewPanel,  BorderLayout.CENTER);
     }
 }
