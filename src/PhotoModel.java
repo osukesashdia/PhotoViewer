@@ -11,14 +11,12 @@ import javax.imageio.ImageIO;
  */
 class PhotoModel {
     private BufferedImage image;
-    private boolean flipped;  // For horizontal flip (old functionality)
-    private boolean showingBack;  // For photo back/front flip (new functionality)
-    private List<Annotation> annotations;
+    private boolean flipped;  // true = photo back (white surface), false = photo front (image)
+    private List<Annotation> annotations;  // Annotations only for back side
 
     public PhotoModel() {
         this.image = null;
-        this.flipped = false;
-        this.showingBack = false;
+        this.flipped = false;  // false = photo front, true = photo back
         this.annotations = new ArrayList<>();
     }
 
@@ -43,24 +41,12 @@ class PhotoModel {
         this.flipped = !this.flipped;
     }
 
-    public boolean isShowingBack() {
-        return showingBack;
-    }
-
-    public void toggleShowingBack() {
-        this.showingBack = !this.showingBack;
-    }
-
-    public void setShowingBack(boolean showingBack) {
-        this.showingBack = showingBack;
-    }
-
     public void addAnnotation(Annotation ann) {
         annotations.add(ann);
     }
 
     public List<Annotation> getAnnotations() {
-        return new ArrayList<>(annotations); // Return copy to maintain encapsulation
+        return new ArrayList<>(annotations);
     }
 
     /**

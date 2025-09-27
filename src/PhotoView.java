@@ -29,14 +29,13 @@ class PhotoView {
             drawBackground(g2, c);
             
             // Two rendering paths based on flip state
-            if (model.isShowingBack()) {
+            if (model.isFlipped()) {
                 // Photo back: white surface + annotations
                 drawPhotoBack(g2, c);
                 drawAnnotations(g2, c);
             } else {
-                // Photo front: image + annotations
+                // Photo front: image only (no annotations on front)
                 drawPhoto(g2, c);
-                drawAnnotations(g2, c);
             }
             
         } finally {

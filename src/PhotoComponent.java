@@ -36,7 +36,7 @@ public class PhotoComponent extends PACController {
     }
 
     /**
-     * Controller method: Handle annotation addition
+     * Controller method: Handle annotation addition (only on back side)
      */
     public void addAnnotation(String text, int x, int y) {
         if (text != null && !text.isBlank()) {
@@ -46,18 +46,10 @@ public class PhotoComponent extends PACController {
     }
 
     /**
-     * Controller method: Handle flip toggle (horizontal flip)
+     * Controller method: Handle flip toggle (photo front/back)
      */
     public void toggleFlip() {
         model.toggleFlipped();
-        refreshView();
-    }
-
-    /**
-     * Controller method: Handle photo back/front flip toggle
-     */
-    public void togglePhotoBack() {
-        model.toggleShowingBack();
         refreshView();
     }
 
@@ -88,13 +80,16 @@ public class PhotoComponent extends PACController {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
                     // Double-click: flip between photo front and back
-                    togglePhotoBack();
+                    toggleFlip();
                 } else if (e.getClickCount() == 1) {
-                    // Single-click: add annotation
-                    String text = JOptionPane.showInputDialog(
-                            PhotoComponent.this,
-                            "Enter annotation text:");
-                    addAnnotation(text, e.getX(), e.getY());
+                    // Single-click: add annotation (only on back side)
+                    if (model.isFlipped()) {
+                        String text = JOptionPane.showInputDialog(
+                                PhotoComponent.this,
+                                "Enter annotation text:");
+                        addAnnotation(text, e.getX(), e.getY());
+                    }
+                    // No action if clicked on front side
                 }
             }
         });
@@ -105,9 +100,6 @@ public class PhotoComponent extends PACController {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyChar() == 'f') {
                     toggleFlip();
-                } else if (e.getKeyChar() == 'b') {
-                    // 'B' key to toggle photo back
-                    togglePhotoBack();
                 }
             }
         });

@@ -69,17 +69,11 @@ public class Main {
         JMenu viewMenu = new JMenu("View");
         viewMenu.setMnemonic('V');
         
-        // Flip menu item (horizontal flip)
-        JMenuItem flipItem = new JMenuItem("Flip Image (Horizontal)");
+        // Flip menu item (photo front/back)
+        JMenuItem flipItem = new JMenuItem("Flip Photo (F)");
         flipItem.setMnemonic('F');
         flipItem.setAccelerator(KeyStroke.getKeyStroke("F"));
         flipItem.addActionListener(e -> controller.toggleFlip());
-        
-        // Photo back menu item
-        JMenuItem photoBackItem = new JMenuItem("Flip to Photo Back");
-        photoBackItem.setMnemonic('B');
-        photoBackItem.setAccelerator(KeyStroke.getKeyStroke("B"));
-        photoBackItem.addActionListener(e -> controller.togglePhotoBack());
         
         // Clear annotations menu item
         JMenuItem clearItem = new JMenuItem("Clear Annotations");
@@ -91,7 +85,6 @@ public class Main {
         });
         
         viewMenu.add(flipItem);
-        viewMenu.add(photoBackItem);
         viewMenu.add(clearItem);
         
         // Help menu
@@ -173,11 +166,11 @@ public class Main {
                         "• Presentation: PhotoView\n\n" +
                         "Features:\n" +
                         "• Import and view images\n" +
-                        "• Add annotations by clicking\n" +
-                        "• Flip images horizontally with 'F' key\n" +
-                        "• Double-click to flip to photo back (white surface)\n" +
-                        "• Use 'B' key to toggle photo back\n" +
-                        "• Clear annotations\n\n" +
+                        "• Add annotations ONLY on the back side\n" +
+                        "• Double-click or press 'F' to flip between front and back\n" +
+                        "• Clear annotations for current side\n\n" +
+                        "Note: Annotations are only visible on the back side,\n" +
+                        "just like writing on the back of a physical photo!\n\n" +
                         "Built with Java Swing";
         
         JOptionPane.showMessageDialog(null, message, "About Photo Viewer", JOptionPane.INFORMATION_MESSAGE);
