@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-
+import java.util.List;
 /**
  * Presentation layer in PAC pattern
  * Handles all rendering and visual presentation logic
@@ -30,8 +30,10 @@ class PhotoView {
             
             // Two rendering paths based on flip state
             if (model.isFlipped()) {
-                // Photo back: white surface + annotations
+                // Photo back: white surface + strokes + text blocks + annotations
                 drawPhotoBack(g2, c);
+                drawStrokes(g2, c);
+                drawTextBlocks(g2, c);
                 drawAnnotations(g2, c);
             } else {
                 // Photo front: image only (no annotations on front)
@@ -108,18 +110,35 @@ class PhotoView {
     }
 
     /**
-     * Presentation method: Draw annotations with enhanced styling
+     * Presentation method: Draw freehand strokes
+     */
+    private void drawStrokes(Graphics2D g2, JComponent c) {
+        for (Stroke stroke : model.getStrokes()) {
+            stroke.draw(g2);
+        }
+    }
+
+    /**
+     * Presentation method: Draw text blocks with word wrap
+     */
+    private void drawTextBlocks(Graphics2D g2, JComponent c) {
+        g2.setColor(Color.BLUE);
+        
+        for (TextBlock textBlock : model.getTextBlocks()) {
+            if (!textBlock.isEmpty()) {
+                int photoWidth = model.getImageDimensions().width;
+                textBlock.draw(g2, photoWidth);
+            }
+        }
+    }
+
+    /**
+     * Presentation method: Draw annotations with word wrapping
      */
     private void drawAnnotations(Graphics2D g2, JComponent c) {
-        g2.setColor(Color.RED);
-        g2.setFont(new Font("Arial", Font.BOLD, 12));
-        
         for (Annotation ann : model.getAnnotations()) {
-            // Draw text with shadow for better visibility
-            g2.setColor(Color.BLACK);
-            g2.drawString(ann.text, ann.x + 1, ann.y + 1);
-            g2.setColor(Color.RED);
-            g2.drawString(ann.text, ann.x, ann.y);
+            int photoWidth = model.getImageDimensions().width;
+            ann.draw(g2, photoWidth);
         }
     }
 
