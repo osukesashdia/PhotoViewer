@@ -24,6 +24,7 @@ public class Main {
 
         // Layout the components
         frame.setLayout(new BorderLayout());
+        frame.add(photoController.createToolBar(), BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
 
         // Configure and show the window

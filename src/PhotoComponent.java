@@ -1,8 +1,9 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
-
+import java.util.List;
 /**
  * Controller in PAC pattern
  * Handles user interactions and coordinates between Model and View
@@ -20,7 +21,7 @@ public class PhotoComponent extends PACController {
     public PhotoComponent(String imagePath) {
         // Initialize PAC components
         this.model = new PhotoModel();
-        this.view = new PhotoView(model);
+        this.view = new PhotoView(); // No model reference in View
 
         // Load initial image if provided
         if (imagePath != null) {
@@ -183,9 +184,7 @@ public class PhotoComponent extends PACController {
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyChar() == 'f') {
-                    toggleFlip();
-                } else if (model.isFlipped() && model.getCurrentTextBlock() != null) {
+                if (model.isFlipped() && model.getCurrentTextBlock() != null) {
                     // Handle text typing
                     if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
                         model.backspaceCurrentText();
@@ -207,12 +206,21 @@ public class PhotoComponent extends PACController {
     }
 
     /**
-     * Controller method: Delegate rendering to View
+     * Controller method: Delegate rendering to View with data from Model
      */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        view.draw(g, this);
+        
+        // Get data from Model and pass to View (Controller coordinates)
+        boolean isFlipped = model.isFlipped();
+        BufferedImage image = model.getImage();
+        List<Stroke> strokes = model.getStrokes();
+        List<TextBlock> textBlocks = model.getTextBlocks();
+        List<Annotation> annotations = model.getAnnotations();
+        
+        // Delegate rendering to View with data
+        view.draw(g, this, isFlipped, image, strokes, textBlocks, annotations);
         
         // Draw current stroke being drawn for immediate feedback
         if (isDrawing && currentStroke != null) {
@@ -228,10 +236,9 @@ public class PhotoComponent extends PACController {
      */
     @Override
     public Dimension getPreferredSize() {
-        if (model.getImage() != null) {
-            return new Dimension(model.getImage().getWidth(), model.getImage().getHeight());
-        }
-        return DEFAULT_SIZE;
+        // Get data from Model and pass to View
+        BufferedImage image = model.getImage();
+        return view.getPreferredSize(image);
     }
 
     /**
@@ -258,178 +265,23 @@ public class PhotoComponent extends PACController {
     }
 
     /**
-     * Controller method: Create menu bar for the photo viewer
+     * Controller method: Delegate menu bar creation to Presentation layer
      */
     public JMenuBar createMenuBar() {
-        JMenuBar menuBar = new JMenuBar();
-        
-        // File menu
-        JMenu fileMenu = new JMenu("File");
-        fileMenu.setMnemonic('F');
-        
-        // Import menu item
-        JMenuItem importItem = new JMenuItem("Import");
-        importItem.setMnemonic('I');
-        importItem.setAccelerator(KeyStroke.getKeyStroke("ctrl I"));
-        importItem.addActionListener(e -> importImage());
-        
-        // Exit menu item
-        JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.setMnemonic('E');
-        exitItem.setAccelerator(KeyStroke.getKeyStroke("ctrl Q"));
-        exitItem.addActionListener(e -> System.exit(0));
-        
-        fileMenu.add(importItem);
-        fileMenu.addSeparator();
-        fileMenu.add(exitItem);
-        
-        // View menu
-        JMenu viewMenu = new JMenu("View");
-        viewMenu.setMnemonic('V');
-        
-        // Flip menu item (photo front/back)
-        JMenuItem flipItem = new JMenuItem("Flip Photo (F)");
-        flipItem.setMnemonic('F');
-        flipItem.setAccelerator(KeyStroke.getKeyStroke("F"));
-        flipItem.addActionListener(e -> toggleFlip());
-        
-        // Clear annotations menu item
-        JMenuItem clearItem = new JMenuItem("Clear Annotations");
-        clearItem.setMnemonic('C');
-        clearItem.setAccelerator(KeyStroke.getKeyStroke("ctrl C"));
-        clearItem.addActionListener(e -> {
-            model.clearAnnotations();
-            repaint();
-        });
-        
-        // Clear strokes menu item
-        JMenuItem clearStrokesItem = new JMenuItem("Clear Strokes");
-        clearStrokesItem.setMnemonic('S');
-        clearStrokesItem.setAccelerator(KeyStroke.getKeyStroke("ctrl S"));
-        clearStrokesItem.addActionListener(e -> {
-            model.clearStrokes();
-            repaint();
-        });
-        
-        // Clear text blocks menu item
-        JMenuItem clearTextItem = new JMenuItem("Clear Text Blocks");
-        clearTextItem.setMnemonic('T');
-        clearTextItem.setAccelerator(KeyStroke.getKeyStroke("ctrl T"));
-        clearTextItem.addActionListener(e -> {
-            model.clearTextBlocks();
-            repaint();
-        });
-        
-        // Clear all menu item
-        JMenuItem clearAllItem = new JMenuItem("Clear All");
-        clearAllItem.setMnemonic('A');
-        clearAllItem.setAccelerator(KeyStroke.getKeyStroke("ctrl A"));
-        clearAllItem.addActionListener(e -> {
-            model.clearAll();
-            repaint();
-        });
-        
-        viewMenu.add(flipItem);
-        viewMenu.addSeparator();
-        viewMenu.add(clearItem);
-        viewMenu.add(clearStrokesItem);
-        viewMenu.add(clearTextItem);
-        viewMenu.add(clearAllItem);
-        
-        // Help menu
-        JMenu helpMenu = new JMenu("Help");
-        helpMenu.setMnemonic('H');
-        
-        JMenuItem aboutItem = new JMenuItem("About");
-        aboutItem.setMnemonic('A');
-        aboutItem.addActionListener(e -> showAboutDialog());
-        
-        helpMenu.add(aboutItem);
-        
-        // Add menus to menu bar
-        menuBar.add(fileMenu);
-        menuBar.add(viewMenu);
-        menuBar.add(helpMenu);
-        
-        return menuBar;
+        return view.createMenuBar(this);
     }
 
     /**
-     * Controller method: Import image using file chooser
+     * Controller method: Delegate import dialog to Presentation layer
      */
     public void importImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Select Image File");
-        
-        // Set file filter for image files
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if (f.isDirectory()) {
-                    return true;
-                }
-                String name = f.getName().toLowerCase();
-                return name.endsWith(".jpg") || name.endsWith(".jpeg") || 
-                       name.endsWith(".png") || name.endsWith(".gif") || 
-                       name.endsWith(".bmp");
-            }
-            
-            @Override
-            public String getDescription() {
-                return "Image Files (*.jpg, *.jpeg, *.png, *.gif, *.bmp)";
-            }
-        });
-        
-        // Set current directory to the img folder if it exists
-        File imgDir = new File("img");
-        if (imgDir.exists()) {
-            fileChooser.setCurrentDirectory(imgDir);
-        }
-        
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            try {
-                loadImage(selectedFile.getAbsolutePath());
-                JOptionPane.showMessageDialog(this, 
-                    "Image loaded successfully!", 
-                    "Success", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error loading image: " + e.getMessage(), 
-                    "Error", 
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        view.showImportDialog(this);
     }
 
     /**
-     * Controller method: Show about dialog
+     * Controller method: Delegate toolbar creation to Presentation layer
      */
-    private void showAboutDialog() {
-        String message = "Photo Viewer - PAC Pattern Demo\n\n" +
-                        "This application demonstrates the PAC (Presentation-Abstraction-Controller) pattern:\n\n" +
-                        "• Controller: PhotoComponent\n" +
-                        "• Abstraction: PhotoModel\n" +
-                        "• Presentation: PhotoView\n\n" +
-                        "Features:\n" +
-                        "• Import and view images\n" +
-                        "• Draw freehand strokes on the back side\n" +
-                        "• Type text directly on the back side\n" +
-                        "• Double-click or press 'F' to flip between front and back\n" +
-                        "• Clear annotations, strokes, or all content\n\n" +
-                        "Drawing Controls:\n" +
-                        "• Click and drag: Draw freehand strokes\n" +
-                        "• Click (no drag): Set text insertion point\n" +
-                        "• Type: Add text at insertion point with word wrap\n" +
-                        "• Enter: Commit text as annotation\n" +
-                        "• Escape: Cancel text insertion\n" +
-                        "• Double-click: Flip photo\n\n" +
-                        "Note: Drawing and text are only visible on the back side,\n" +
-                        "just like writing on the back of a physical photo!\n\n" +
-                        "Built with Java Swing";
-        
-        JOptionPane.showMessageDialog(null, message, "About Photo Viewer", JOptionPane.INFORMATION_MESSAGE);
+    public JPanel createToolBar() {
+        return view.createToolBar();
     }
 }
