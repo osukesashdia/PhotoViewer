@@ -18,9 +18,9 @@ class PhotoView {
      * Main rendering method - receives data from Controller
      */
     public void draw(Graphics g, JComponent c, boolean isFlipped, BufferedImage image, 
-                    List<Stroke> strokes, List<TextBlock> textBlocks, List<Annotation> annotations) {
+                    List<Stroke> strokes, List<TextBlock> textBlocks, List<Annotation> annotations, TextBlock currentTextBlock) {
         Graphics2D g2 = (Graphics2D) g.create();
-        
+
         try {
             // Enable anti-aliasing for better quality
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -34,7 +34,7 @@ class PhotoView {
                 // Photo back: white surface + strokes + text blocks + annotations
                 drawPhotoBack(g2, c, image);
                 drawStrokes(g2, strokes);
-                drawTextBlocks(g2, textBlocks, image);
+                drawTextBlocks(g2, textBlocks, image, currentTextBlock);
                 drawAnnotations(g2, annotations, image);
             } else {
                 // Photo front: image only (no annotations on front)
@@ -69,7 +69,7 @@ class PhotoView {
     private void drawPhoto(Graphics2D g2, JComponent c, BufferedImage image, boolean isFlipped) {
         if (image != null) {
             int w = image.getWidth();
-            int h = image.getHeight();
+
 
             if (isFlipped) {
                 AffineTransform tx = AffineTransform.getScaleInstance(-1, 1);
@@ -85,29 +85,27 @@ class PhotoView {
      * Presentation method: Draw the photo back (white surface)
      */
     private void drawPhotoBack(Graphics2D g2, JComponent c, BufferedImage image) {
+        int surfaceWidth, surfaceHeight;
+        
         if (image != null) {
-            // Draw white surface the same size as the photo
-            int photoWidth = image.getWidth();
-            int photoHeight = image.getHeight();
-            g2.setColor(Color.WHITE);
-            g2.fillRect(0, 0, photoWidth, photoHeight);
-            
-            // Draw a subtle border to indicate it's the back
-            g2.setColor(Color.LIGHT_GRAY);
-            g2.setStroke(new java.awt.BasicStroke(2));
-            g2.drawRect(0, 0, photoWidth - 1, photoHeight - 1);
-            
-            // Draw "PHOTO BACK" text in the center
-            g2.setColor(Color.GRAY);
-            g2.setFont(new Font("Arial", Font.ITALIC, 16));
-            String backText = "PHOTO BACK";
-            FontMetrics fm = g2.getFontMetrics();
-            int textWidth = fm.stringWidth(backText);
-            int textHeight = fm.getHeight();
-            int x = (photoWidth - textWidth) / 2;
-            int y = (photoHeight - textHeight) / 2 + fm.getAscent();
-            g2.drawString(backText, x, y);
+            // Use photo dimensions
+            surfaceWidth = image.getWidth();
+            surfaceHeight = image.getHeight();
+        } else {
+            // Use component dimensions when no image
+            surfaceWidth = c.getWidth();
+            surfaceHeight = c.getHeight();
         }
+        
+        // Draw white surface
+        g2.setColor(Color.WHITE);
+        g2.fillRect(0, 0, surfaceWidth, surfaceHeight);
+        
+        // Draw a subtle border to indicate it's the back
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.setStroke(new java.awt.BasicStroke(2));
+        g2.drawRect(0, 0, surfaceWidth - 1, surfaceHeight - 1);
+
     }
 
     /**
@@ -122,13 +120,15 @@ class PhotoView {
     /**
      * Presentation method: Draw text blocks with word wrap
      */
-    private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image) {
+    private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock) {
         g2.setColor(Color.BLUE);
         
         for (TextBlock textBlock : textBlocks) {
             if (!textBlock.isEmpty()) {
                 int photoWidth = image != null ? image.getWidth() : 0;
-                textBlock.draw(g2, photoWidth);
+                // Pass whether this is the current active text block
+                boolean isActive = (textBlock == currentTextBlock);
+                textBlock.draw(g2, photoWidth, isActive);
             }
         }
     }
@@ -174,16 +174,7 @@ class PhotoView {
         deleteItem.setMnemonic('D');
         deleteItem.setAccelerator(KeyStroke.getKeyStroke("ctrl D"));
         deleteItem.addActionListener(e -> {
-            // Confirm deletion with user
-            int result = JOptionPane.showConfirmDialog(controller,
-                "Are you sure you want to delete this photo?",
-                "Delete Photo",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-            
-            if (result == JOptionPane.YES_OPTION) {
-                controller.deletePhoto();
-            }
+            controller.deletePhoto();
         });
         
         // Quit menu item
@@ -201,21 +192,29 @@ class PhotoView {
         JMenu viewMenu = new JMenu("View");
         viewMenu.setMnemonic('V');
         
-        // Photo menu item
-        JMenuItem photoItem = new JMenuItem("Photo");
+        // Create button group for radio buttons
+        ButtonGroup viewGroup = new ButtonGroup();
+        
+        // Photo menu item (radio button)
+        JRadioButtonMenuItem photoItem = new JRadioButtonMenuItem("Photo");
         photoItem.setMnemonic('P');
         photoItem.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
+        photoItem.setSelected(true); // Default selected
         photoItem.addActionListener(e -> {
-            // TODO: Implement photo view functionality
+            // Photo view functionality not implemented yet
         });
         
-        // Browse menu item
-        JMenuItem browseItem = new JMenuItem("Browse");
+        // Browse menu item (radio button)
+        JRadioButtonMenuItem browseItem = new JRadioButtonMenuItem("Browse");
         browseItem.setMnemonic('B');
         browseItem.setAccelerator(KeyStroke.getKeyStroke("ctrl B"));
         browseItem.addActionListener(e -> {
-            // TODO: Implement browse functionality
+            // Browse functionality not implemented yet
         });
+        
+        // Add to button group
+        viewGroup.add(photoItem);
+        viewGroup.add(browseItem);
         
         viewMenu.add(photoItem);
         viewMenu.add(browseItem);
@@ -236,12 +235,63 @@ class PhotoView {
 
         for (String category : categories) {
             JToggleButton categoryToggleButton = new JToggleButton(category);
-            // TODO: Add action listener when functionality is implemented
+            categoryToggleButton.addActionListener(e -> {
+                // Update status bar when toolbar button is clicked
+                updateStatusBar(toolBarPanel, category + " button clicked");
+            });
             toolBarPanel.add(categoryToggleButton);
         }
 
         toolBarPanel.setBackground(Color.LIGHT_GRAY);
         return toolBarPanel;
+    }
+
+    /**
+     * Create status bar with label to show toolbar button clicks
+     */
+    public JPanel createStatusBar() {
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createLoweredBevelBorder());
+        statusBar.setBackground(Color.LIGHT_GRAY);
+        
+        JLabel statusLabel = new JLabel("Ready");
+        statusLabel.setName("statusLabel"); // For easy access
+        statusBar.add(statusLabel, BorderLayout.WEST);
+        
+        return statusBar;
+    }
+
+    /**
+     * Update status bar message
+     */
+    private void updateStatusBar(JPanel toolBarPanel, String message) {
+        // Find the status bar in the component hierarchy
+        JComponent parent = (JComponent) toolBarPanel.getParent();
+        while (parent != null) {
+            JLabel statusLabel = findStatusLabel(parent);
+            if (statusLabel != null) {
+                statusLabel.setText(message);
+                break;
+            }
+            parent = (JComponent) parent.getParent();
+        }
+    }
+
+    /**
+     * Helper method to find status label in component hierarchy
+     */
+    private JLabel findStatusLabel(Container container) {
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof JLabel && "statusLabel".equals(comp.getName())) {
+                return (JLabel) comp;
+            } else if (comp instanceof Container) {
+                JLabel found = findStatusLabel((Container) comp);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -281,30 +331,10 @@ class PhotoView {
             File selectedFile = fileChooser.getSelectedFile();
             try {
                 controller.loadImage(selectedFile.getAbsolutePath());
-                showSuccessDialog(controller, "Image loaded successfully!");
             } catch (Exception e) {
-                showErrorDialog(controller, "Error loading image: " + e.getMessage());
+                // Silently handle error - no dialog
             }
         }
     }
 
-    /**
-     * Presentation method: Show success dialog
-     */
-    public void showSuccessDialog(Component parent, String message) {
-        JOptionPane.showMessageDialog(parent, 
-            message, 
-            "Success", 
-            JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    /**
-     * Presentation method: Show error dialog
-     */
-    public void showErrorDialog(Component parent, String message) {
-        JOptionPane.showMessageDialog(parent, 
-            message, 
-            "Error", 
-            JOptionPane.ERROR_MESSAGE);
-    }
 }

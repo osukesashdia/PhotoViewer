@@ -12,9 +12,9 @@ import javax.imageio.ImageIO;
 class PhotoModel {
     private BufferedImage image;
     private boolean flipped;  // true = photo back (white surface), false = photo front (image)
-    private List<Annotation> annotations;  // Annotations only for back side
-    private List<Stroke> strokes;  // Freehand strokes for back side
-    private List<TextBlock> textBlocks;  // Text blocks for word wrap
+    private final List<Annotation> annotations;  // Annotations only for back side
+    private final List<Stroke> strokes;  // Freehand strokes for back side
+    private final List<TextBlock> textBlocks;  // Text blocks for word wrap
     private TextBlock currentTextBlock;  // Current active text block
 
     public PhotoModel() {
@@ -27,6 +27,10 @@ class PhotoModel {
     }
 
     public void loadImage(File file) {
+        if (file == null) {
+            this.image = null;
+            return;
+        }
         try {
             this.image = ImageIO.read(file);
         } catch (Exception e) {
@@ -105,43 +109,17 @@ class PhotoModel {
     }
 
     /**
-     * Business logic: Clear all annotations
-     */
-    public void clearAnnotations() {
-        annotations.clear();
-    }
-
-    /**
-     * Business logic: Clear all strokes
-     */
-    public void clearStrokes() {
-        strokes.clear();
-    }
-
-    /**
-     * Business logic: Clear all text blocks
-     */
-    public void clearTextBlocks() {
-        textBlocks.clear();
-        currentTextBlock = null;
-    }
-
-    /**
      * Business logic: Clear all annotations, strokes, and text blocks
      */
     public void clearAll() {
+        image = null;  // Clear the image
+        flipped = false;  // Reset flip state
         annotations.clear();
         strokes.clear();
         textBlocks.clear();
         currentTextBlock = null;
     }
 
-    /**
-     * Business logic: Remove annotation at specific coordinates
-     */
-    public boolean removeAnnotationAt(int x, int y) {
-        return annotations.removeIf(ann -> Math.abs(ann.x - x) < 10 && Math.abs(ann.y - y) < 10);
-    }
 
     /**
      * Business logic: Check if image is loaded
@@ -160,11 +138,5 @@ class PhotoModel {
         return new Dimension(0, 0);
     }
 
-    /**
-     * Business logic: Get annotation count
-     */
-    public int getAnnotationCount() {
-        return annotations.size();
-    }
 }
 

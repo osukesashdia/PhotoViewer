@@ -9,10 +9,8 @@ import java.util.List;
  * Handles user interactions and coordinates between Model and View
  */
 public class PhotoComponent extends PACController {
-    private static final Dimension DEFAULT_SIZE = new Dimension(400, 300);
-
-    private PhotoModel model;  // Abstraction layer
-    private PhotoView view;    // Presentation layer
+    private final PhotoModel model;  // Abstraction layer
+    private final PhotoView view;    // Presentation layer
     private Stroke currentStroke;  // Current stroke being drawn
     private boolean isDrawing;     // Whether currently drawing
     private boolean mousePressed;  // Whether mouse is currently pressed
@@ -36,19 +34,15 @@ public class PhotoComponent extends PACController {
      * Controller method: Handle image loading
      */
     public void loadImage(String imagePath) {
-        model.loadImage(new File(imagePath));
+        if (imagePath != null) {
+            model.loadImage(new File(imagePath));
+        } else {
+            model.loadImage(null);
+        }
         refreshView();
     }
 
-    /**
-     * Controller method: Handle annotation addition (only on back side)
-     */
-    public void addAnnotation(String text, int x, int y) {
-        if (text != null && !text.isBlank()) {
-            model.addAnnotation(new Annotation(text, x, y));
-            refreshView();
-        }
-    }
+
 
     /**
      * Controller method: Start drawing a new stroke
@@ -87,7 +81,11 @@ public class PhotoComponent extends PACController {
      * Controller method: Check if point is within photo bounds
      */
     private boolean isWithinPhotoBounds(int x, int y) {
-        if (!model.hasImage()) return false;
+        if (!model.hasImage()) {
+            // When no image, allow clicking on the default component area
+            Dimension componentSize = getSize();
+            return x >= 0 && x < componentSize.width && y >= 0 && y < componentSize.height;
+        }
         Dimension photoSize = model.getImageDimensions();
         return x >= 0 && x < photoSize.width && y >= 0 && y < photoSize.height;
     }
@@ -98,6 +96,7 @@ public class PhotoComponent extends PACController {
     private void setTextInsertionPoint(int x, int y) {
         if (isWithinPhotoBounds(x, y)) {
             model.setTextInsertionPoint(new Point(x, y));
+            requestFocusInWindow(); // Request focus for keyboard events
             repaint();
         }
     }
@@ -119,18 +118,6 @@ public class PhotoComponent extends PACController {
         repaint();
     }
 
-    /**
-     * Controller method: Handle user input events
-     */
-    @Override
-    protected void handleUserInput() {
-        // This method is called by setupEventHandlers
-        // The actual input handling is done in the event listeners
-    }
-
-    /**
-     * Controller method: Set up all event handlers
-     */
     private void setupEventHandlers() {
         // Mouse: drawing, text insertion, and double-click to flip photo
         addMouseListener(new MouseAdapter() {
@@ -138,6 +125,8 @@ public class PhotoComponent extends PACController {
                 if (model.isFlipped() && e.getButton() == MouseEvent.BUTTON1) {
                     mousePressed = true;
                     mouseMoved = false;
+                    // Request focus for keyboard events
+                    requestFocusInWindow();
                     // Don't start drawing yet - wait to see if mouse moves
                 }
             }
@@ -180,7 +169,7 @@ public class PhotoComponent extends PACController {
             }
         });
 
-        // Keyboard: flip and text typing
+        // Keyboard: text typing only
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -218,9 +207,10 @@ public class PhotoComponent extends PACController {
         List<Stroke> strokes = model.getStrokes();
         List<TextBlock> textBlocks = model.getTextBlocks();
         List<Annotation> annotations = model.getAnnotations();
+        TextBlock currentTextBlock = model.getCurrentTextBlock();
         
         // Delegate rendering to View with data
-        view.draw(g, this, isFlipped, image, strokes, textBlocks, annotations);
+        view.draw(g, this, isFlipped, image, strokes, textBlocks, annotations, currentTextBlock);
         
         // Draw current stroke being drawn for immediate feedback
         if (isDrawing && currentStroke != null) {
@@ -241,12 +231,6 @@ public class PhotoComponent extends PACController {
         return view.getPreferredSize(image);
     }
 
-    /**
-     * Controller method: Load new photo (public API)
-     */
-    public void loadNewPhoto(String path) {
-        loadImage(path);
-    }
 
     /**
      * Controller method: Get model for external access if needed
@@ -256,13 +240,6 @@ public class PhotoComponent extends PACController {
         return model;
     }
 
-    /**
-     * Controller method: Get view for external access if needed
-     */
-    @Override
-    public PhotoView getView() {
-        return view;
-    }
 
     /**
      * Controller method: Delegate menu bar creation to Presentation layer
@@ -301,5 +278,9 @@ public class PhotoComponent extends PACController {
         
         // Refresh the view to show empty state
         refreshView();
+    }
+
+    public JPanel createStatusBar(){
+        return view.createStatusBar();
     }
 }
