@@ -284,4 +284,22 @@ public class PhotoComponent extends PACController {
     public JPanel createToolBar() {
         return view.createToolBar();
     }
+
+    /**
+     * Controller method: Delete the current photo
+     * This will clear all data and reset the component to empty state
+     */
+    public void deletePhoto() {
+        // Clear all data from model
+        model.clearAll();
+        
+        // Clear current drawing state
+        currentStroke = null;
+        isDrawing = false;
+        mousePressed = false;
+        mouseMoved = false;
+        
+        // Refresh the view to show empty state
+        refreshView();
+    }
 }

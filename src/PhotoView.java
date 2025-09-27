@@ -174,7 +174,16 @@ class PhotoView {
         deleteItem.setMnemonic('D');
         deleteItem.setAccelerator(KeyStroke.getKeyStroke("ctrl D"));
         deleteItem.addActionListener(e -> {
-            // TODO: Implement delete functionality
+            // Confirm deletion with user
+            int result = JOptionPane.showConfirmDialog(controller,
+                "Are you sure you want to delete this photo?",
+                "Delete Photo",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+            
+            if (result == JOptionPane.YES_OPTION) {
+                controller.deletePhoto();
+            }
         });
         
         // Quit menu item
