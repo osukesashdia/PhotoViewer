@@ -78,10 +78,30 @@ public class PhotoView implements IPhotoView {
     }
 
     private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock) {
+        int surfaceWidth, surfaceHeight;
+        if (image != null) {
+            surfaceWidth = image.getWidth();
+            surfaceHeight = image.getHeight();
+        } else {
+            surfaceWidth = Constants.DEFAULT_WIDTH;
+            surfaceHeight = Constants.DEFAULT_HEIGHT;
+        }
+        
+        g2.setClip(0, 0, surfaceWidth, surfaceHeight);
         drawingRenderer.drawTextBlocks(g2, textBlocks, image, currentTextBlock);
     }
 
     private void drawAnnotations(Graphics2D g2, List<Annotation> annotations, BufferedImage image) {
+        int surfaceWidth, surfaceHeight;
+        if (image != null) {
+            surfaceWidth = image.getWidth();
+            surfaceHeight = image.getHeight();
+        } else {
+            surfaceWidth = Constants.DEFAULT_WIDTH;
+            surfaceHeight = Constants.DEFAULT_HEIGHT;
+        }
+        
+        g2.setClip(0, 0, surfaceWidth, surfaceHeight);
         drawingRenderer.drawAnnotations(g2, annotations, image);
     }
 
@@ -101,7 +121,6 @@ public class PhotoView implements IPhotoView {
     
     private JMenu createFileMenu(PhotoComponent controller) {
         JMenu fileMenu = new JMenu("File");
-        fileMenu.setMnemonic('F');
         
         fileMenu.add(createImportMenuItem(controller));
         fileMenu.add(createDeleteMenuItem(controller));
@@ -112,31 +131,24 @@ public class PhotoView implements IPhotoView {
     
     private JMenuItem createImportMenuItem(PhotoComponent controller) {
         JMenuItem importItem = new JMenuItem("Import");
-        importItem.setMnemonic('I');
-        importItem.setAccelerator(KeyStroke.getKeyStroke("ctrl I"));
         importItem.addActionListener(e -> controller.importImage());
         return importItem;
     }
     
     private JMenuItem createDeleteMenuItem(PhotoComponent controller) {
         JMenuItem deleteItem = new JMenuItem("Delete");
-        deleteItem.setMnemonic('D');
-        deleteItem.setAccelerator(KeyStroke.getKeyStroke("ctrl D"));
         deleteItem.addActionListener(e -> controller.deletePhoto());
         return deleteItem;
     }
     
     private JMenuItem createQuitMenuItem() {
         JMenuItem quitItem = new JMenuItem("Quit");
-        quitItem.setMnemonic('Q');
-        quitItem.setAccelerator(KeyStroke.getKeyStroke("ctrl Q"));
         quitItem.addActionListener(e -> System.exit(0));
         return quitItem;
     }
     
     private JMenu createViewMenu() {
         JMenu viewMenu = new JMenu("View");
-        viewMenu.setMnemonic('V');
         
         ButtonGroup viewGroup = new ButtonGroup();
         JRadioButtonMenuItem photoItem = createPhotoMenuItem();
@@ -152,8 +164,6 @@ public class PhotoView implements IPhotoView {
     
     private JRadioButtonMenuItem createPhotoMenuItem() {
         JRadioButtonMenuItem photoItem = new JRadioButtonMenuItem("Photo");
-        photoItem.setMnemonic('P');
-        photoItem.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
         photoItem.setSelected(true);
         photoItem.addActionListener(e -> {
         });
@@ -162,8 +172,6 @@ public class PhotoView implements IPhotoView {
     
     private JRadioButtonMenuItem createBrowseMenuItem() {
         JRadioButtonMenuItem browseItem = new JRadioButtonMenuItem("Browse");
-        browseItem.setMnemonic('B');
-        browseItem.setAccelerator(KeyStroke.getKeyStroke("ctrl B"));
         browseItem.addActionListener(e -> {
         });
         return browseItem;
@@ -222,22 +230,6 @@ public class PhotoView implements IPhotoView {
     public void showImportDialog(PhotoComponent controller) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Select Image File");
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if (f.isDirectory()) {
-                    return true;
-                }
-                String name = f.getName().toLowerCase();
-                return name.endsWith(".jpg") || name.endsWith(".jpeg") || 
-                       name.endsWith(".png") || name.endsWith(".gif") || 
-                       name.endsWith(".bmp");
-            }
-            @Override
-            public String getDescription() {
-                return "Image Files (*.jpg, *.jpeg, *.png, *.gif, *.bmp)";
-            }
-        });
         File imgDir = new File("img");
         if (imgDir.exists()) {
             fileChooser.setCurrentDirectory(imgDir);

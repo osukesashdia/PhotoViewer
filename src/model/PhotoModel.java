@@ -51,10 +51,6 @@ public class PhotoModel implements IPhotoModel {
         this.flipped = !this.flipped;
     }
 
-    public void addAnnotation(Annotation ann) {
-        annotations.add(ann);
-    }
-
     public List<Annotation> getAnnotations() {
         return new ArrayList<>(annotations);
     }
@@ -75,10 +71,7 @@ public class PhotoModel implements IPhotoModel {
             currentTextBlock = null;
         }
     }
-    
-    public Point getTextInsertionPoint() {
-        return currentTextBlock != null ? currentTextBlock.getInsertionPoint() : null;
-    }
+
 
     public TextBlock getCurrentTextBlock() {
         return currentTextBlock;

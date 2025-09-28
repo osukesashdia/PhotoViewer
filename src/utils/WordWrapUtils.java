@@ -20,8 +20,16 @@ public class WordWrapUtils implements IWordWrapper {
             if (lineWidth <= maxWidth) {
                 currentLine = new StringBuilder(testLine);
             } else {
-                y = drawCurrentLineAndAdvance(g2, fm, x, y, currentLine, lineHeight, maxWidth);
-                currentLine = new StringBuilder(word);
+                if (currentLine.length() > 0) {
+                    y = drawCurrentLineAndAdvance(g2, fm, x, y, currentLine, lineHeight, maxWidth);
+                }
+                
+                if (fm.stringWidth(word) > maxWidth) {
+                    y = drawLongWord(g2, fm, x, y, lineHeight, maxWidth, word);
+                    currentLine = new StringBuilder();
+                } else {
+                    currentLine = new StringBuilder(word);
+                }
             }
         }
         
@@ -39,7 +47,7 @@ public class WordWrapUtils implements IWordWrapper {
             g2.drawString(currentLine.toString(), x, y);
             return y + lineHeight;
         } else {
-            return drawLongWord(g2, fm, x, y, lineHeight, maxWidth, "");
+            return y;
         }
     }
     

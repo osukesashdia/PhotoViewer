@@ -48,7 +48,7 @@ public class DrawingUtils implements IDrawingRenderer {
     public void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock) {
         for (TextBlock textBlock : textBlocks) {
             if (!textBlock.isEmpty()) {
-                int photoWidth = image != null ? image.getWidth() : 0;
+                int photoWidth = image != null ? image.getWidth() : Constants.DEFAULT_WIDTH;
                 boolean isActive = (textBlock == currentTextBlock);
                 
                 setTextBlockColor(g2, textBlock, isActive);
@@ -60,7 +60,7 @@ public class DrawingUtils implements IDrawingRenderer {
     @Override
     public void drawAnnotations(Graphics2D g2, List<Annotation> annotations, BufferedImage image) {
         for (Annotation ann : annotations) {
-            int photoWidth = image != null ? image.getWidth() : 0;
+            int photoWidth = image != null ? image.getWidth() : Constants.DEFAULT_WIDTH;
             ann.draw(g2, photoWidth);
         }
     }

@@ -27,14 +27,7 @@ public class TextBlock {
             text.setLength(text.length() - 1);
         }
     }
-    
-    public Point getInsertionPoint() {
-        return new Point(insertionPoint);
-    }
-    
-    public String getText() {
-        return text.toString();
-    }
+
     
     public boolean isEmpty() {
         return text.length() == 0;
