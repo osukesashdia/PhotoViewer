@@ -2,6 +2,7 @@ package interfaces;
 
 import java.awt.Graphics2D;
 import java.awt.FontMetrics;
+import java.awt.Rectangle;
 
 public interface ITextRenderer {
     void setupFont(Graphics2D g2);
@@ -9,4 +10,5 @@ public interface ITextRenderer {
     void drawCursor(Graphics2D g2, FontMetrics fm, int x, int y);
     void drawCursorAtEnd(Graphics2D g2, FontMetrics fm, int x, int y, String text);
     int calculateLineHeight(FontMetrics fm);
+    Rectangle calculateTextBounds(FontMetrics fm, String text, int x, int y, int maxWidth);
 }

@@ -14,6 +14,7 @@ import model.Annotation;
 import controller.PhotoComponent;
 import utils.Constants;
 import utils.DrawingUtils;
+import utils.TextUtils;
 
 public class PhotoView implements IPhotoView {
     private final IDrawingRenderer drawingRenderer = new DrawingUtils();
@@ -21,8 +22,8 @@ public class PhotoView implements IPhotoView {
     public PhotoView() {
     }
 
-    public void draw(Graphics g, JComponent c, boolean isFlipped, BufferedImage image, 
-                    List<Stroke> strokes, List<TextBlock> textBlocks, List<Annotation> annotations, TextBlock currentTextBlock) {
+    public void draw(Graphics g, JComponent c, boolean isFlipped, boolean annotationsVisible, BufferedImage image, 
+                    List<Stroke> strokes, List<TextBlock> textBlocks, List<Annotation> annotations, TextBlock currentTextBlock, Object selectedObject) {
         Graphics2D g2 = (Graphics2D) g.create();
 
         try {
@@ -33,11 +34,18 @@ public class PhotoView implements IPhotoView {
             
             if (isFlipped) {
                 drawPhotoBack(g2, c, image);
-                drawStrokes(g2, strokes);
-                drawTextBlocks(g2, textBlocks, image, currentTextBlock);
-                drawAnnotations(g2, annotations, image);
+                if (annotationsVisible) {
+                    drawStrokes(g2, strokes, selectedObject);
+                    drawTextBlocks(g2, textBlocks, image, currentTextBlock, selectedObject);
+                    drawAnnotations(g2, annotations, image, selectedObject);
+                }
                 } else {
                 drawPhoto(g2, c, image, isFlipped);
+                if (annotationsVisible) {
+                    drawStrokes(g2, strokes, selectedObject);
+                    drawTextBlocks(g2, textBlocks, image, currentTextBlock, selectedObject);
+                    drawAnnotations(g2, annotations, image, selectedObject);
+                }
             }
         } finally {
             g2.dispose();
@@ -73,11 +81,17 @@ public class PhotoView implements IPhotoView {
         drawingRenderer.drawWhiteSurface(g2, surfaceWidth, surfaceHeight);
     }
 
-    private void drawStrokes(Graphics2D g2, List<Stroke> strokes) {
-        drawingRenderer.drawStrokes(g2, strokes);
+    private void drawStrokes(Graphics2D g2, List<Stroke> strokes, Object selectedObject) {
+        for (Stroke stroke : strokes) {
+            stroke.draw(g2);
+            // Strokes are not selectable - no selection highlighting
+            // if (stroke == selectedObject) {
+            //     drawSelectionHighlight(g2, stroke);
+            // }
+        }
     }
 
-    private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock) {
+    private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock, Object selectedObject) {
         int surfaceWidth, surfaceHeight;
         if (image != null) {
             surfaceWidth = image.getWidth();
@@ -88,10 +102,19 @@ public class PhotoView implements IPhotoView {
         }
         
         g2.setClip(0, 0, surfaceWidth, surfaceHeight);
-        drawingRenderer.drawTextBlocks(g2, textBlocks, image, currentTextBlock);
+        for (TextBlock textBlock : textBlocks) {
+            // Only draw non-empty TextBlocks
+            if (!textBlock.isEmpty()) {
+                textBlock.draw(g2, surfaceWidth, textBlock == currentTextBlock);
+                // Draw selection highlight if this text block is selected
+                if (textBlock == selectedObject) {
+                    drawSelectionHighlight(g2, textBlock, surfaceWidth);
+                }
+            }
+        }
     }
 
-    private void drawAnnotations(Graphics2D g2, List<Annotation> annotations, BufferedImage image) {
+    private void drawAnnotations(Graphics2D g2, List<Annotation> annotations, BufferedImage image, Object selectedObject) {
         int surfaceWidth, surfaceHeight;
         if (image != null) {
             surfaceWidth = image.getWidth();
@@ -102,7 +125,84 @@ public class PhotoView implements IPhotoView {
         }
         
         g2.setClip(0, 0, surfaceWidth, surfaceHeight);
-        drawingRenderer.drawAnnotations(g2, annotations, image);
+        for (Annotation annotation : annotations) {
+            // Only draw non-empty annotations
+            if (!annotation.isEmpty()) {
+                annotation.draw(g2, surfaceWidth);
+                // Draw editing cursor if this annotation is being edited
+                if (annotation == selectedObject && annotation.isEditing()) {
+                    drawEditingCursor(g2, annotation);
+                }
+                // Draw selection highlight if this annotation is selected
+                if (annotation == selectedObject) {
+                    drawSelectionHighlight(g2, annotation, surfaceWidth);
+                }
+            }
+        }
+    }
+
+    private void drawSelectionHighlight(Graphics2D g2, Object obj, int surfaceWidth) {
+        g2.setColor(Color.RED);
+        g2.setStroke(new java.awt.BasicStroke(2.0f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        
+        if (obj instanceof Stroke) {
+            Stroke stroke = (Stroke) obj;
+            // Draw a bounding box around the stroke
+            Rectangle bounds = getStrokeBounds(stroke);
+            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
+        } else if (obj instanceof TextBlock) {
+            TextBlock textBlock = (TextBlock) obj;
+            Rectangle bounds = getTextBlockBounds(textBlock, surfaceWidth);
+            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
+        } else if (obj instanceof Annotation) {
+            Annotation annotation = (Annotation) obj;
+            Rectangle bounds = getAnnotationBounds(annotation, surfaceWidth);
+            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
+        }
+    }
+
+    private Rectangle getStrokeBounds(Stroke stroke) {
+        // This is a simplified bounding box calculation
+        // In a real implementation, you'd want to calculate the actual bounds
+        Point center = stroke.getCenter();
+        return new Rectangle(center.x - 50, center.y - 10, 100, 20);
+    }
+
+    private Rectangle getTextBlockBounds(TextBlock textBlock, int surfaceWidth) {
+        if (textBlock.isEmpty()) {
+            // Empty TextBlocks should not be selectable, return empty rectangle
+            Rectangle emptyRect = new Rectangle(0, 0, 0, 0);
+            System.out.println("🔍 getTextBlockBounds: EMPTY TextBlock -> height = " + emptyRect.height);
+            return emptyRect;
+        }
+        
+        // Use cached bounds from TextBlock to ensure consistency
+        Rectangle bounds = textBlock.getBounds(surfaceWidth);
+        System.out.println("🔍 getTextBlockBounds: Using cached bounds from TextBlock -> height = " + bounds.height);
+        return bounds;
+    }
+
+    private Rectangle getAnnotationBounds(Annotation annotation, int surfaceWidth) {
+        if (annotation.isEmpty()) {
+            Point pos = annotation.getPosition();
+            Rectangle emptyRect = new Rectangle(pos.x, pos.y - 15, 0, 15);
+            System.out.println("🔍 getAnnotationBounds: EMPTY Annotation -> height = " + emptyRect.height);
+            return emptyRect;
+        }
+        
+        // Use cached bounds from Annotation to ensure consistency
+        Rectangle bounds = annotation.getBounds(surfaceWidth);
+        System.out.println("🔍 getAnnotationBounds: Using cached bounds from Annotation -> height = " + bounds.height);
+        return bounds;
+    }
+
+    private void drawEditingCursor(Graphics2D g2, Annotation annotation) {
+        g2.setColor(Color.BLUE);
+        g2.setStroke(new java.awt.BasicStroke(1.0f));
+        Point pos = annotation.getPosition();
+        // Draw a simple cursor at the end of the text
+        int cursorX = pos.x + 100; // Approximate end of text
+        g2.drawLine(cursorX, pos.y - 15, cursorX, pos.y + 5);
     }
 
     public Dimension getPreferredSize(BufferedImage image) {
@@ -177,8 +277,20 @@ public class PhotoView implements IPhotoView {
         return browseItem;
     }
 
-    public JPanel createToolBar() {
+    public JPanel createToolBar(PhotoComponent controller) {
         JPanel toolBarPanel = new JPanel();
+        
+        // Color chooser button
+        JButton colorButton = new JButton("Color");
+        colorButton.addActionListener(e -> {
+            Color selectedColor = JColorChooser.showDialog(toolBarPanel, "Choose Annotation Color", Color.BLACK);
+            if (selectedColor != null) {
+                controller.setAnnotationColor(selectedColor);
+            }
+        });
+        toolBarPanel.add(colorButton);
+        
+        // Category buttons
         String[] categories = {"People", "Foods"};
         for (String category : categories) {
             JToggleButton categoryToggleButton = new JToggleButton(category);

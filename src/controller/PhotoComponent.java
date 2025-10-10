@@ -34,6 +34,76 @@ public class PhotoComponent extends PACController {
         refreshView();
     }
 
+    public void toggleAnnotationsVisible() {
+        model.toggleAnnotationsVisible();
+        refreshView();
+    }
+    
+    public void setAnnotationColor(Color color) {
+        Object selectedObject = model.getSelectedObject();
+        if (selectedObject != null) {
+            if (selectedObject instanceof Annotation) {
+                ((Annotation) selectedObject).setColor(color);
+            } else if (selectedObject instanceof TextBlock) {
+                ((TextBlock) selectedObject).setColor(color);
+            }
+            // Strokes are not selectable, so no color change needed
+            refreshView();
+        }
+    }
+
+    // Hit testing methods
+    private Object findObjectAt(int x, int y, int photoWidth) {
+        // Strokes are not selectable - skip stroke hit testing
+        // for (Stroke stroke : model.getStrokes()) {
+        //     if (stroke.containsPoint(x, y)) {
+        //         return stroke;
+        //     }
+        // }
+        
+        // Check text blocks
+        for (TextBlock textBlock : model.getTextBlocks()) {
+            // Don't select empty TextBlocks that are currently being edited
+            if (textBlock == model.getCurrentTextBlock() && textBlock.isEmpty()) {
+                continue;
+            }
+            if (textBlock.containsPoint(x, y, photoWidth)) {
+                return textBlock;
+            }
+        }
+        
+        // Check annotations
+        for (Annotation annotation : model.getAnnotations()) {
+            if (annotation.containsPoint(x, y, photoWidth)) {
+                return annotation;
+            }
+        }
+        
+        return null;
+    }
+
+    private Point getObjectPosition(Object obj) {
+        if (obj instanceof Stroke) {
+            return ((Stroke) obj).getCenter();
+        } else if (obj instanceof TextBlock) {
+            return ((TextBlock) obj).getPosition();
+        } else if (obj instanceof Annotation) {
+            return ((Annotation) obj).getPosition();
+        }
+        return new Point(0, 0);
+    }
+
+    private void moveObject(Object obj, int dx, int dy) {
+        if (obj instanceof Stroke) {
+            ((Stroke) obj).moveBy(dx, dy);
+        } else if (obj instanceof TextBlock) {
+            ((TextBlock) obj).moveBy(dx, dy);
+        } else if (obj instanceof Annotation) {
+            ((Annotation) obj).moveBy(dx, dy);
+        }
+        refreshView();
+    }
+
     public void loadImage(File imageFile) {
         model.loadImage(imageFile);
         refreshView();
@@ -120,38 +190,94 @@ public class PhotoComponent extends PACController {
     }
     
     private void handleMousePressed(MouseEvent e) {
-        if (model.isFlipped() && e.getButton() == MouseEvent.BUTTON1) {
-            mousePressed = true;
-            mouseMoved = false;
-            requestFocusInWindow();
+        if (!model.isAnnotationsVisible() || e.getButton() != MouseEvent.BUTTON1) {
+            return;
         }
+        
+        mousePressed = true;
+        mouseMoved = false;
+        requestFocusInWindow();
+        
+        int x = e.getX();
+        int y = e.getY();
+        
+        // Get photo width for accurate bounds calculation
+        BufferedImage image = model.getImage();
+        int photoWidth = (image != null) ? image.getWidth() : 0;
+        
+        // Natural interaction: always try to select first
+        Object clickedObject = findObjectAt(x, y, photoWidth);
+        model.setSelectedObject(clickedObject);
+        
+        if (clickedObject != null) {
+            // Clicked on an object - prepare for potential dragging
+            Point objectPos = getObjectPosition(clickedObject);
+            model.setDragOffset(new Point(x - objectPos.x, y - objectPos.y));
+        } else if (isWithinPhotoBounds(x, y)) {
+            // Clicked on empty space - prepare for potential drawing (don't start yet)
+            // Drawing will start only if user drags
+        }
+        
+        refreshView();
     }
     
     private void handleMouseReleased(MouseEvent e) {
-        if (mousePressed && model.isFlipped() && e.getButton() == MouseEvent.BUTTON1) {
-            if (mouseMoved && isDrawing) {
-                finishDrawing();
-            } else if (!mouseMoved) {
-                setTextInsertionPoint(e.getX(), e.getY());
-            }
-            mousePressed = false;
-            mouseMoved = false;
+        if (!mousePressed || !model.isAnnotationsVisible() || e.getButton() != MouseEvent.BUTTON1) {
+            return;
         }
+        
+        int x = e.getX();
+        int y = e.getY();
+        
+        if (mouseMoved && isDrawing) {
+            // Finished drawing a stroke
+            finishDrawing();
+        } else if (!mouseMoved && model.getSelectedObject() == null && isWithinPhotoBounds(x, y)) {
+            // Clicked empty space without moving - create text block
+            setTextInsertionPoint(x, y);
+        } else if (mouseMoved && model.getSelectedObject() != null) {
+            // Finished moving an object
+            model.setDragging(false);
+        }
+        
+        mousePressed = false;
+        mouseMoved = false;
+        refreshView();
     }
     
     private void handleMouseClicked(MouseEvent e) {
         if (e.getClickCount() == 2) {
-            toggleFlip();
+            toggleAnnotationsVisible();
         }
     }
     
     private void handleMouseDragged(MouseEvent e) {
-        if (mousePressed && model.isFlipped()) {
-            mouseMoved = true;
+        if (!mousePressed || !model.isAnnotationsVisible()) {
+            return;
+        }
+        
+        mouseMoved = true;
+        int x = e.getX();
+        int y = e.getY();
+        
+        if (isDrawing) {
+            // Continue drawing stroke
+            continueDrawing(x, y);
+        } else if (model.getSelectedObject() != null) {
+            // Start dragging if we have a selected object
+            if (!model.isDragging()) {
+                model.setDragging(true);
+            }
+            // Move the selected object
+            Point dragOffset = model.getDragOffset();
+            int dx = x - dragOffset.x - getObjectPosition(model.getSelectedObject()).x;
+            int dy = y - dragOffset.y - getObjectPosition(model.getSelectedObject()).y;
+            
+            moveObject(model.getSelectedObject(), dx, dy);
+        } else if (isWithinPhotoBounds(x, y)) {
+            // Start drawing stroke when dragging on empty space
             if (!isDrawing) {
-                startDrawing(e.getX(), e.getY());
-            } else {
-                continueDrawing(e.getX(), e.getY());
+                startDrawing(x, y);
             }
         }
     }
@@ -169,7 +295,23 @@ public class PhotoComponent extends PACController {
     }
     
     private void handleKeyPressed(KeyEvent e) {
-        if (model.isFlipped() && model.getCurrentTextBlock() != null) {
+        if (!model.isAnnotationsVisible()) {
+            return;
+        }
+        
+        // Handle text input for current text block (if actively editing)
+        if (model.getCurrentTextBlock() != null) {
+            handleTextInput(e);
+        }
+        // Handle text input for selected annotation (natural editing)
+        else if (model.getSelectedObject() instanceof Annotation) {
+            Annotation annotation = (Annotation) model.getSelectedObject();
+            handleAnnotationTextInput(e, annotation);
+        }
+        // Handle text input for selected text block (natural editing)
+        else if (model.getSelectedObject() instanceof TextBlock) {
+            TextBlock textBlock = (TextBlock) model.getSelectedObject();
+            model.setCurrentTextBlock(textBlock);
             handleTextInput(e);
         }
     }
@@ -190,22 +332,42 @@ public class PhotoComponent extends PACController {
         }
     }
 
+    private void handleAnnotationTextInput(KeyEvent e, Annotation annotation) {
+        // Automatically start editing when user types
+        if (!annotation.isEditing()) {
+            annotation.setEditing(true);
+        }
+        
+        if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+            annotation.backspace();
+            repaint();
+        } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            annotation.setEditing(false);
+            repaint();
+        } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            annotation.setEditing(false);
+            model.setSelectedObject(null);
+            repaint();
+        } else if (e.getKeyChar() >= 32 && e.getKeyChar() <= 126) {
+            annotation.addCharacter(e.getKeyChar());
+            repaint();
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         boolean isFlipped = model.isFlipped();
+        boolean annotationsVisible = model.isAnnotationsVisible();
         BufferedImage image = model.getImage();
         List<Stroke> strokes = model.getStrokes();
         List<TextBlock> textBlocks = model.getTextBlocks();
         List<Annotation> annotations = model.getAnnotations();
         TextBlock currentTextBlock = model.getCurrentTextBlock();
-        view.draw(g, this, isFlipped, image, strokes, textBlocks, annotations, currentTextBlock);
-        if (isDrawing && currentStroke != null) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            currentStroke.draw(g2);
-            g2.dispose();
-        }
+        Object selectedObject = model.getSelectedObject();
+        view.draw(g, this, isFlipped, annotationsVisible, image, strokes, textBlocks, annotations, currentTextBlock, selectedObject);
+        // Don't draw currentStroke during drawing to prevent selection issues
+        // The stroke will be drawn when it's added to the model after drawing is complete
     }
 
     @Override
@@ -223,7 +385,7 @@ public class PhotoComponent extends PACController {
     }
 
     public JPanel createToolBar() {
-        return view.createToolBar();
+        return view.createToolBar(this);
     }
 
     public void deletePhoto() {

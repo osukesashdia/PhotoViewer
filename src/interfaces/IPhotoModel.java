@@ -18,10 +18,23 @@ public interface IPhotoModel {
     boolean isFlipped();
     void toggleFlipped();
     
+    boolean isAnnotationsVisible();
+    void toggleAnnotationsVisible();
+    
+    // Selection management
+    Object getSelectedObject();
+    void setSelectedObject(Object object);
+    boolean isDragging();
+    void setDragging(boolean dragging);
+    Point getDragOffset();
+    void setDragOffset(Point offset);
+    void clearSelection();
+    
     void addStroke(Stroke stroke);
     List<Stroke> getStrokes();
     
     void setTextInsertionPoint(Point point);
+    void setCurrentTextBlock(TextBlock textBlock);
     void addToCurrentText(char c);
     void backspaceCurrentText();
     void commitCurrentText();

@@ -36,7 +36,6 @@ public class WordWrapUtils implements IWordWrapper {
         if (currentLine.length() > 0) {
             g2.drawString(currentLine.toString(), x, y);
         }
-        
         return y;
     }
     

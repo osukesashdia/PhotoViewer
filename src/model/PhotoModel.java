@@ -11,18 +11,28 @@ import interfaces.IPhotoModel;
 public class PhotoModel implements IPhotoModel {
     private BufferedImage image;
     private boolean flipped;  
+    private boolean annotationsVisible;
     private final List<Annotation> annotations;  
     private final List<Stroke> strokes;  
     private final List<TextBlock> textBlocks;  
     private TextBlock currentTextBlock;
+    
+    // Selection state
+    private Object selectedObject;
+    private boolean isDragging;
+    private Point dragOffset;
 
     public PhotoModel() {
         this.image = null;
         this.flipped = false;  
+        this.annotationsVisible = true;
         this.annotations = new ArrayList<>();
         this.strokes = new ArrayList<>();
         this.textBlocks = new ArrayList<>();
         this.currentTextBlock = null;
+        this.selectedObject = null;
+        this.isDragging = false;
+        this.dragOffset = null;
     }
 
     public void loadImage(File file) {
@@ -51,6 +61,45 @@ public class PhotoModel implements IPhotoModel {
         this.flipped = !this.flipped;
     }
 
+    public boolean isAnnotationsVisible() {
+        return annotationsVisible;
+    }
+
+    public void toggleAnnotationsVisible() {
+        this.annotationsVisible = !this.annotationsVisible;
+    }
+
+    // Selection management methods
+    public Object getSelectedObject() {
+        return selectedObject;
+    }
+
+    public void setSelectedObject(Object object) {
+        this.selectedObject = object;
+    }
+
+    public boolean isDragging() {
+        return isDragging;
+    }
+
+    public void setDragging(boolean dragging) {
+        this.isDragging = dragging;
+    }
+
+    public Point getDragOffset() {
+        return dragOffset;
+    }
+
+    public void setDragOffset(Point offset) {
+        this.dragOffset = offset;
+    }
+
+    public void clearSelection() {
+        this.selectedObject = null;
+        this.isDragging = false;
+        this.dragOffset = null;
+    }
+
     public List<Annotation> getAnnotations() {
         return new ArrayList<>(annotations);
     }
@@ -68,8 +117,16 @@ public class PhotoModel implements IPhotoModel {
             currentTextBlock = new TextBlock(point);
             textBlocks.add(currentTextBlock);
         } else {
+            // Clean up empty TextBlock if it exists
+            if (currentTextBlock != null && currentTextBlock.isEmpty()) {
+                textBlocks.remove(currentTextBlock);
+            }
             currentTextBlock = null;
         }
+    }
+
+    public void setCurrentTextBlock(TextBlock textBlock) {
+        this.currentTextBlock = textBlock;
     }
 
 
@@ -94,8 +151,14 @@ public class PhotoModel implements IPhotoModel {
     }
 
     public void commitCurrentText() {
-        if (currentTextBlock != null && !currentTextBlock.isEmpty()) {
-            currentTextBlock.setCommitted(true);
+        if (currentTextBlock != null) {
+            if (!currentTextBlock.isEmpty()) {
+                // Commit non-empty TextBlock
+                currentTextBlock.setCommitted(true);
+            } else {
+                // Remove empty TextBlock from the list
+                textBlocks.remove(currentTextBlock);
+            }
             currentTextBlock = null;
         }
     }
@@ -103,10 +166,12 @@ public class PhotoModel implements IPhotoModel {
     public void clearAll() {
         image = null;  
         flipped = false;  
+        annotationsVisible = true;
         annotations.clear();
         strokes.clear();
         textBlocks.clear();
         currentTextBlock = null;
+        clearSelection();
     }
 
     public void clearAnnotations() {
