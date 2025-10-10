@@ -13,14 +13,14 @@ public class Annotation {
     private int x, y;
     private boolean isEditing;
     private Color color;
-    private Rectangle cachedBounds = null; // Cache bounds when text changes
+    private Rectangle cachedBounds = null;
     
     public Annotation(String text, int x, int y) {
         this.text = text;
         this.x = x;
         this.y = y;
         this.isEditing = false;
-        this.color = Color.BLACK; // Default color
+        this.color = Color.BLACK;
     }
 
     public void draw(Graphics2D g2, int photoWidth) {
@@ -64,22 +64,19 @@ public class Annotation {
         setupFont(tempG2);
         FontMetrics fm = tempG2.getFontMetrics();
         
-        // Calculate accurate bounds using the SAME photoWidth as rendering
         int maxWidth = calculateMaxWidth(photoWidth);
-        System.out.println("🔍 Annotation.containsPoint: Using photoWidth=" + photoWidth + ", maxWidth=" + maxWidth + " for bounds calculation");
         Rectangle bounds = textRenderer.calculateTextBounds(fm, text, x, y, maxWidth);
         
         tempG2.dispose();
         tempImage.flush();
         
-        System.out.println("🔍 Annotation.containsPoint: bounds.height = " + bounds.height + ", contains(" + px + "," + py + ") = " + bounds.contains(px, py));
         return bounds.contains(px, py);
     }
 
     public void moveBy(int dx, int dy) {
         x += dx;
         y += dy;
-        invalidateBounds(); // Recalculate bounds when position changes
+        invalidateBounds();
     }
 
     public Point getPosition() {
@@ -89,7 +86,7 @@ public class Annotation {
     public void setPosition(Point position) {
         this.x = position.x;
         this.y = position.y;
-        invalidateBounds(); // Recalculate bounds when position changes
+        invalidateBounds();
     }
 
     // Text editing methods
@@ -114,13 +111,13 @@ public class Annotation {
             text = "";
         }
         text += c;
-        invalidateBounds(); // Recalculate bounds when text changes
+        invalidateBounds();
     }
 
     public void backspace() {
         if (text != null && text.length() > 0) {
             text = text.substring(0, text.length() - 1);
-            invalidateBounds(); // Recalculate bounds when text changes
+            invalidateBounds();
         }
     }
 
@@ -141,7 +138,6 @@ public class Annotation {
             FontMetrics fm = tempG2.getFontMetrics();
             
             int maxWidth = calculateMaxWidth(photoWidth);
-            System.out.println("🔍 Annotation.getBounds: Calculating bounds with photoWidth=" + photoWidth + ", maxWidth=" + maxWidth);
             cachedBounds = textRenderer.calculateTextBounds(fm, text, x, y, maxWidth);
             
             tempG2.dispose();

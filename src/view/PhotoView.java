@@ -84,10 +84,6 @@ public class PhotoView implements IPhotoView {
     private void drawStrokes(Graphics2D g2, List<Stroke> strokes, Object selectedObject) {
         for (Stroke stroke : strokes) {
             stroke.draw(g2);
-            // Strokes are not selectable - no selection highlighting
-            // if (stroke == selectedObject) {
-            //     drawSelectionHighlight(g2, stroke);
-            // }
         }
     }
 
@@ -106,10 +102,6 @@ public class PhotoView implements IPhotoView {
             // Only draw non-empty TextBlocks
             if (!textBlock.isEmpty()) {
                 textBlock.draw(g2, surfaceWidth, textBlock == currentTextBlock);
-                // Draw selection highlight if this text block is selected
-                if (textBlock == selectedObject) {
-                    drawSelectionHighlight(g2, textBlock, surfaceWidth);
-                }
             }
         }
     }
@@ -133,33 +125,10 @@ public class PhotoView implements IPhotoView {
                 if (annotation == selectedObject && annotation.isEditing()) {
                     drawEditingCursor(g2, annotation);
                 }
-                // Draw selection highlight if this annotation is selected
-                if (annotation == selectedObject) {
-                    drawSelectionHighlight(g2, annotation, surfaceWidth);
-                }
             }
         }
     }
 
-    private void drawSelectionHighlight(Graphics2D g2, Object obj, int surfaceWidth) {
-        g2.setColor(Color.RED);
-        g2.setStroke(new java.awt.BasicStroke(2.0f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-        
-        if (obj instanceof Stroke) {
-            Stroke stroke = (Stroke) obj;
-            // Draw a bounding box around the stroke
-            Rectangle bounds = getStrokeBounds(stroke);
-            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
-        } else if (obj instanceof TextBlock) {
-            TextBlock textBlock = (TextBlock) obj;
-            Rectangle bounds = getTextBlockBounds(textBlock, surfaceWidth);
-            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
-        } else if (obj instanceof Annotation) {
-            Annotation annotation = (Annotation) obj;
-            Rectangle bounds = getAnnotationBounds(annotation, surfaceWidth);
-            g2.drawRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4);
-        }
-    }
 
     private Rectangle getStrokeBounds(Stroke stroke) {
         // This is a simplified bounding box calculation
@@ -168,33 +137,6 @@ public class PhotoView implements IPhotoView {
         return new Rectangle(center.x - 50, center.y - 10, 100, 20);
     }
 
-    private Rectangle getTextBlockBounds(TextBlock textBlock, int surfaceWidth) {
-        if (textBlock.isEmpty()) {
-            // Empty TextBlocks should not be selectable, return empty rectangle
-            Rectangle emptyRect = new Rectangle(0, 0, 0, 0);
-            System.out.println("🔍 getTextBlockBounds: EMPTY TextBlock -> height = " + emptyRect.height);
-            return emptyRect;
-        }
-        
-        // Use cached bounds from TextBlock to ensure consistency
-        Rectangle bounds = textBlock.getBounds(surfaceWidth);
-        System.out.println("🔍 getTextBlockBounds: Using cached bounds from TextBlock -> height = " + bounds.height);
-        return bounds;
-    }
-
-    private Rectangle getAnnotationBounds(Annotation annotation, int surfaceWidth) {
-        if (annotation.isEmpty()) {
-            Point pos = annotation.getPosition();
-            Rectangle emptyRect = new Rectangle(pos.x, pos.y - 15, 0, 15);
-            System.out.println("🔍 getAnnotationBounds: EMPTY Annotation -> height = " + emptyRect.height);
-            return emptyRect;
-        }
-        
-        // Use cached bounds from Annotation to ensure consistency
-        Rectangle bounds = annotation.getBounds(surfaceWidth);
-        System.out.println("🔍 getAnnotationBounds: Using cached bounds from Annotation -> height = " + bounds.height);
-        return bounds;
-    }
 
     private void drawEditingCursor(Graphics2D g2, Annotation annotation) {
         g2.setColor(Color.BLUE);
