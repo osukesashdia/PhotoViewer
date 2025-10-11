@@ -15,8 +15,6 @@ public class PhotoModel implements IPhotoModel {
     private final List<Annotation> annotations;  
     private final List<Stroke> strokes;  
     private Annotation currentTextAnnotation;
-    
-    // Selection state
     private Object selectedObject;
     private boolean isDragging;
     private Point dragOffset;
@@ -67,10 +65,10 @@ public class PhotoModel implements IPhotoModel {
         this.annotationsVisible = !this.annotationsVisible;
     }
 
-    // Selection management methods
     public Object getSelectedObject() {
         return selectedObject;
     }
+
 
     public void setSelectedObject(Object object) {
         this.selectedObject = object;
@@ -115,7 +113,6 @@ public class PhotoModel implements IPhotoModel {
             currentTextAnnotation = new Annotation(point);
             annotations.add(currentTextAnnotation);
         } else {
-            // Clean up empty annotation if it exists
             if (currentTextAnnotation != null && currentTextAnnotation.isEmpty()) {
                 annotations.remove(currentTextAnnotation);
             }
@@ -147,10 +144,8 @@ public class PhotoModel implements IPhotoModel {
     public void commitCurrentText() {
         if (currentTextAnnotation != null) {
             if (!currentTextAnnotation.isEmpty()) {
-                // Commit non-empty annotation
                 currentTextAnnotation.setCommitted(true);
             } else {
-                // Remove empty annotation from the list
                 annotations.remove(currentTextAnnotation);
             }
             currentTextAnnotation = null;
@@ -173,11 +168,13 @@ public class PhotoModel implements IPhotoModel {
         currentTextAnnotation = null;
     }
 
+
     public boolean hasImage() {
         return image != null;
     }
 
     public Dimension getImageDimensions() {
+
         if (image != null) {
             return new Dimension(image.getWidth(), image.getHeight());
         }

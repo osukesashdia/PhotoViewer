@@ -19,7 +19,6 @@ public class AnnotationRenderer {
         
         if (maxWidth <= 0) return;
         
-        // Set the color for drawing
         g2.setColor(getColor(annotation));
         wordWrapper.drawWrappedText(g2, fm, getText(annotation), pos.x, pos.y, maxWidth);
     }
@@ -53,7 +52,6 @@ public class AnnotationRenderer {
         return bounds;
     }
     
-    // Helper methods to access annotation data without knowing the model class
     private boolean isEmpty(Object annotation) {
         try {
             return (Boolean) annotation.getClass().getMethod("isEmpty").invoke(annotation);

@@ -27,20 +27,7 @@ public class TextUtils {
         return photoWidth - x - Constants.TEXT_MARGIN;
     }
     
-    public void drawCursor(Graphics2D g2, FontMetrics fm, int x, int y) {
-        g2.setStroke(new java.awt.BasicStroke(Constants.CURSOR_STROKE_WIDTH));
-        g2.drawLine(x, y - fm.getAscent(), x, y);
-    }
-    
-    public void drawCursorAtEnd(Graphics2D g2, FontMetrics fm, int x, int y, String text) {
-        int textWidth = fm.stringWidth(text);
-        int cursorX = x + textWidth;
-        int cursorY = y;
-        g2.setStroke(new java.awt.BasicStroke(Constants.CURSOR_STROKE_WIDTH));
-        g2.drawLine(cursorX, cursorY - fm.getAscent(), cursorX, cursorY);
-    }
 
-    // Text bounds calculation methods
     public Rectangle calculateTextBounds(FontMetrics fm, String text, int x, int y, int maxWidth) {
         if (text == null || text.isEmpty()) {
             return new Rectangle(x, y - fm.getAscent(), 0, fm.getHeight());

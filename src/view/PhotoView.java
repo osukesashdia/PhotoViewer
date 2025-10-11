@@ -6,7 +6,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.io.File;
-// Removed model imports - view should not know about model classes
 import java.util.function.Consumer;
 import utils.Constants;
 import utils.DrawingUtils;
@@ -17,7 +16,6 @@ public class PhotoView {
     private final AnnotationRenderer annotationRenderer = new AnnotationRenderer();
     private final StrokeRenderer strokeRenderer = new StrokeRenderer();
     
-    // Event listeners
     private java.awt.event.ActionListener importActionListener;
     private java.awt.event.ActionListener deleteActionListener;
     private java.awt.event.ActionListener colorActionListener;
@@ -26,7 +24,7 @@ public class PhotoView {
     public PhotoView() {
     }
 
-    // Event listener setters
+
     public void setImportActionListener(java.awt.event.ActionListener listener) {
         this.importActionListener = listener;
     }
@@ -119,44 +117,33 @@ public class PhotoView {
         
         g2.setClip(0, 0, surfaceWidth, surfaceHeight);
         for (Object annotation : annotations) {
-            // Only draw non-empty annotations
+
             if (!isEmpty(annotation)) {
-                // Use AnnotationRenderer for all annotations
+
                 boolean isActive = (annotation == currentTextAnnotation);
                 annotationRenderer.drawAnnotation(g2, annotation, surfaceWidth);
                 
-                // Draw editing cursor if this annotation is being edited
-                if (annotation == selectedObject && isEditing(annotation)) {
-                    drawEditingCursor(g2, annotation);
-                }
+
             }
         }
     }
 
 
     private Rectangle getStrokeBounds(Object stroke) {
-        // This is a simplified bounding box calculation
-        // In a real implementation, you'd want to calculate the actual bounds
+
+
         try {
             Point center = (Point) stroke.getClass().getMethod("getCenter").invoke(stroke);
             return new Rectangle(center.x - 50, center.y - 10, 100, 20);
         } catch (Exception e) {
-            // Fallback to a default bounds if reflection fails
+
             return new Rectangle(0, 0, 100, 20);
         }
     }
 
 
-    private void drawEditingCursor(Graphics2D g2, Object annotation) {
-        g2.setColor(Color.BLUE);
-        g2.setStroke(new java.awt.BasicStroke(1.0f));
-        Point pos = getPosition(annotation);
-        // Draw a simple cursor at the end of the text
-        int cursorX = pos.x + 100; // Approximate end of text
-        g2.drawLine(cursorX, pos.y - 15, cursorX, pos.y + 5);
-    }
     
-    // Helper methods to access object data without knowing the model class
+
     private boolean isEmpty(Object obj) {
         try {
             return (Boolean) obj.getClass().getMethod("isEmpty").invoke(obj);
@@ -264,7 +251,7 @@ public class PhotoView {
     public JPanel createToolBar() {
         JPanel toolBarPanel = new JPanel();
         
-        // Color chooser button
+
         JButton colorButton = new JButton("Color");
         colorButton.addActionListener(e -> {
             if (colorActionListener != null) {
@@ -273,7 +260,7 @@ public class PhotoView {
         });
         toolBarPanel.add(colorButton);
         
-        // Category buttons
+
         String[] categories = {"People", "Foods"};
         for (String category : categories) {
             JToggleButton categoryToggleButton = new JToggleButton(category);

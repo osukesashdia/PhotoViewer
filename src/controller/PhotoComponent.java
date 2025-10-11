@@ -21,7 +21,6 @@ public class PhotoComponent extends PACController {
     private boolean mousePressed;  
     private boolean mouseMoved;
     
-    // Hit tester (now handles both TextBlocks and Annotations)
     private final AnnotationHitTester annotationHitTester = new AnnotationHitTester();
 
     public PhotoComponent(String imagePath) {
@@ -32,7 +31,6 @@ public class PhotoComponent extends PACController {
     }
     
     private void setupViewEventListeners() {
-        // Set up event listeners for view actions
         view.setImportActionListener(e -> importImage());
         view.setDeleteActionListener(e -> deletePhoto());
         view.setColorActionListener(e -> showColorChooser());
@@ -47,7 +45,7 @@ public class PhotoComponent extends PACController {
     }
     
     private void updateStatusBar(String message) {
-        // Find and update status bar
+
         JComponent parent = (JComponent) getParent();
         while (parent != null) {
             JLabel statusLabel = findStatusLabel(parent);
@@ -89,23 +87,16 @@ public class PhotoComponent extends PACController {
             if (selectedObject instanceof Annotation) {
                 ((Annotation) selectedObject).setColor(color);
             }
-            // Strokes are not selectable, so no color change needed
+           
             refreshView();
         }
     }
 
-    // Hit testing methods
+ 
     private Object findObjectAt(int x, int y, int photoWidth) {
-        // Strokes are not selectable - skip stroke hit testing
-        // for (Stroke stroke : model.getStrokes()) {
-        //     if (stroke.containsPoint(x, y)) {
-        //         return stroke;
-        //     }
-        // }
-        
-        // Check annotations (includes both text blocks and regular annotations)
+      
         for (Annotation annotation : model.getAnnotations()) {
-            // Don't select empty annotations that are currently being edited
+          
             if (annotation == model.getCurrentTextAnnotation() && annotation.isEmpty()) {
                 continue;
             }
@@ -232,21 +223,20 @@ public class PhotoComponent extends PACController {
         int x = e.getX();
         int y = e.getY();
         
-        // Get photo width for accurate bounds calculation
+
         BufferedImage image = model.getImage();
         int photoWidth = (image != null) ? image.getWidth() : 0;
         
-        // Natural interaction: always try to select first
+  
         Object clickedObject = findObjectAt(x, y, photoWidth);
         model.setSelectedObject(clickedObject);
         
         if (clickedObject != null) {
-            // Clicked on an object - prepare for potential dragging
+         
             Point objectPos = getObjectPosition(clickedObject);
             model.setDragOffset(new Point(x - objectPos.x, y - objectPos.y));
         } else if (isWithinPhotoBounds(x, y)) {
-            // Clicked on empty space - prepare for potential drawing (don't start yet)
-            // Drawing will start only if user drags
+       
         }
         
         refreshView();
@@ -261,13 +251,13 @@ public class PhotoComponent extends PACController {
         int y = e.getY();
         
         if (mouseMoved && isDrawing) {
-            // Finished drawing a stroke
+          
             finishDrawing();
         } else if (!mouseMoved && model.getSelectedObject() == null && isWithinPhotoBounds(x, y)) {
-            // Clicked empty space without moving - create text block
+         
             setTextInsertionPoint(x, y);
         } else if (mouseMoved && model.getSelectedObject() != null) {
-            // Finished moving an object
+         
             model.setDragging(false);
         }
         
@@ -292,21 +282,21 @@ public class PhotoComponent extends PACController {
         int y = e.getY();
         
         if (isDrawing) {
-            // Continue drawing stroke
+          
             continueDrawing(x, y);
         } else if (model.getSelectedObject() != null) {
-            // Start dragging if we have a selected object
+          
             if (!model.isDragging()) {
                 model.setDragging(true);
             }
-            // Move the selected object
+          
             Point dragOffset = model.getDragOffset();
             int dx = x - dragOffset.x - getObjectPosition(model.getSelectedObject()).x;
             int dy = y - dragOffset.y - getObjectPosition(model.getSelectedObject()).y;
             
             moveObject(model.getSelectedObject(), dx, dy);
         } else if (isWithinPhotoBounds(x, y)) {
-            // Start drawing stroke when dragging on empty space
+          
             if (!isDrawing) {
                 startDrawing(x, y);
             }
@@ -330,11 +320,11 @@ public class PhotoComponent extends PACController {
             return;
         }
         
-        // Handle text input for current text annotation (if actively editing)
+       
         if (model.getCurrentTextAnnotation() != null) {
             handleTextInput(e);
         }
-        // Handle text input for selected annotation (natural editing)
+      
         else if (model.getSelectedObject() instanceof Annotation) {
             Annotation annotation = (Annotation) model.getSelectedObject();
             model.setCurrentTextAnnotation(annotation);
@@ -359,7 +349,7 @@ public class PhotoComponent extends PACController {
     }
 
     private void handleAnnotationTextInput(KeyEvent e, Annotation annotation) {
-        // Automatically start editing when user types
+      
         if (!annotation.isEditing()) {
             annotation.setEditing(true);
         }
@@ -383,7 +373,7 @@ public class PhotoComponent extends PACController {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        // Delegate rendering to view
+     
         boolean isFlipped = model.isFlipped();
         boolean annotationsVisible = model.isAnnotationsVisible();
         BufferedImage image = model.getImage();
@@ -396,7 +386,7 @@ public class PhotoComponent extends PACController {
 
     @Override
     public Dimension getPreferredSize() {
-        // Delegate sizing to view
+     
         BufferedImage image = model.getImage();
         return view.getPreferredSize(image);
     }
@@ -406,7 +396,7 @@ public class PhotoComponent extends PACController {
     }
 
     public void importImage() {
-        // Handle import logic in controller
+   
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Select Image File");
         File imgDir = new File("img");
@@ -425,11 +415,11 @@ public class PhotoComponent extends PACController {
     }
 
     public void deletePhoto() {
-        // Clear model data
+
         model.clearAll();
-        // Reset controller state
+
         resetControllerState();
-        // Refresh view
+
         refreshView();
     }
     

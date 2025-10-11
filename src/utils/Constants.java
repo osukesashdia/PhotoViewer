@@ -8,7 +8,6 @@ public class Constants {
     public static final int FONT_SIZE_BOLD = 12;
     
     public static final int TEXT_MARGIN = 10;
-    public static final int CURSOR_STROKE_WIDTH = 1;
     public static final float STROKE_WIDTH = 2.0f;
     
     public static final Color STROKE_COLOR = Color.BLACK;

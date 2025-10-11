@@ -22,7 +22,6 @@ public class StrokeRenderer {
         }
     }
     
-    // Helper methods to access stroke data without knowing the model class
     private boolean isEmpty(Object stroke) {
         try {
             return (Boolean) stroke.getClass().getMethod("isEmpty").invoke(stroke);

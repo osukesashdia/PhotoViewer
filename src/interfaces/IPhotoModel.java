@@ -20,7 +20,7 @@ public interface IPhotoModel {
     boolean isAnnotationsVisible();
     void toggleAnnotationsVisible();
     
-    // Selection management
+
     Object getSelectedObject();
     void setSelectedObject(Object object);
     boolean isDragging();
