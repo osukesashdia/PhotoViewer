@@ -5,7 +5,6 @@ import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
-import model.TextBlock;
 import model.Stroke;
 import model.Annotation;
 
@@ -34,12 +33,11 @@ public interface IPhotoModel {
     List<Stroke> getStrokes();
     
     void setTextInsertionPoint(Point point);
-    void setCurrentTextBlock(TextBlock textBlock);
+    void setCurrentTextAnnotation(Annotation annotation);
     void addToCurrentText(char c);
     void backspaceCurrentText();
     void commitCurrentText();
-    TextBlock getCurrentTextBlock();
-    List<TextBlock> getTextBlocks();
+    Annotation getCurrentTextAnnotation();
 
     List<Annotation> getAnnotations();
     

@@ -7,9 +7,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
 import interfaces.IPhotoModel;
-import interfaces.IPhotoView;
 import model.PhotoModel;
-import model.TextBlock;
 import model.Stroke;
 import model.Annotation;
 import view.PhotoView;
@@ -17,16 +15,62 @@ import utils.Constants;
 
 public class PhotoComponent extends PACController {
     private final IPhotoModel model;  
-    private final IPhotoView view;    
+    private final PhotoView view;    
     private Stroke currentStroke;  
     private boolean isDrawing;     
     private boolean mousePressed;  
     private boolean mouseMoved;
+    
+    // Hit tester (now handles both TextBlocks and Annotations)
+    private final AnnotationHitTester annotationHitTester = new AnnotationHitTester();
 
     public PhotoComponent(String imagePath) {
         this.model = new PhotoModel();
         this.view = new PhotoView(); 
         setupEventHandlers();
+        setupViewEventListeners();
+    }
+    
+    private void setupViewEventListeners() {
+        // Set up event listeners for view actions
+        view.setImportActionListener(e -> importImage());
+        view.setDeleteActionListener(e -> deletePhoto());
+        view.setColorActionListener(e -> showColorChooser());
+        view.setStatusUpdateListener(message -> updateStatusBar(message));
+    }
+    
+    private void showColorChooser() {
+        Color selectedColor = JColorChooser.showDialog(this, "Choose Annotation Color", Color.BLACK);
+        if (selectedColor != null) {
+            setAnnotationColor(selectedColor);
+        }
+    }
+    
+    private void updateStatusBar(String message) {
+        // Find and update status bar
+        JComponent parent = (JComponent) getParent();
+        while (parent != null) {
+            JLabel statusLabel = findStatusLabel(parent);
+            if (statusLabel != null) {
+                statusLabel.setText(message);
+                break;
+            }
+            parent = (JComponent) parent.getParent();
+        }
+    }
+    
+    private JLabel findStatusLabel(Container container) {
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof JLabel && "statusLabel".equals(comp.getName())) {
+                return (JLabel) comp;
+            } else if (comp instanceof Container) {
+                JLabel found = findStatusLabel((Container) comp);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     public void toggleFlip() {
@@ -44,8 +88,6 @@ public class PhotoComponent extends PACController {
         if (selectedObject != null) {
             if (selectedObject instanceof Annotation) {
                 ((Annotation) selectedObject).setColor(color);
-            } else if (selectedObject instanceof TextBlock) {
-                ((TextBlock) selectedObject).setColor(color);
             }
             // Strokes are not selectable, so no color change needed
             refreshView();
@@ -61,20 +103,13 @@ public class PhotoComponent extends PACController {
         //     }
         // }
         
-        // Check text blocks
-        for (TextBlock textBlock : model.getTextBlocks()) {
-            // Don't select empty TextBlocks that are currently being edited
-            if (textBlock == model.getCurrentTextBlock() && textBlock.isEmpty()) {
+        // Check annotations (includes both text blocks and regular annotations)
+        for (Annotation annotation : model.getAnnotations()) {
+            // Don't select empty annotations that are currently being edited
+            if (annotation == model.getCurrentTextAnnotation() && annotation.isEmpty()) {
                 continue;
             }
-            if (textBlock.containsPoint(x, y, photoWidth)) {
-                return textBlock;
-            }
-        }
-        
-        // Check annotations
-        for (Annotation annotation : model.getAnnotations()) {
-            if (annotation.containsPoint(x, y, photoWidth)) {
+            if (annotationHitTester.containsPoint(annotation, x, y, photoWidth)) {
                 return annotation;
             }
         }
@@ -85,8 +120,6 @@ public class PhotoComponent extends PACController {
     private Point getObjectPosition(Object obj) {
         if (obj instanceof Stroke) {
             return ((Stroke) obj).getCenter();
-        } else if (obj instanceof TextBlock) {
-            return ((TextBlock) obj).getPosition();
         } else if (obj instanceof Annotation) {
             return ((Annotation) obj).getPosition();
         }
@@ -96,8 +129,6 @@ public class PhotoComponent extends PACController {
     private void moveObject(Object obj, int dx, int dy) {
         if (obj instanceof Stroke) {
             ((Stroke) obj).moveBy(dx, dy);
-        } else if (obj instanceof TextBlock) {
-            ((TextBlock) obj).moveBy(dx, dy);
         } else if (obj instanceof Annotation) {
             ((Annotation) obj).moveBy(dx, dy);
         }
@@ -299,20 +330,15 @@ public class PhotoComponent extends PACController {
             return;
         }
         
-        // Handle text input for current text block (if actively editing)
-        if (model.getCurrentTextBlock() != null) {
+        // Handle text input for current text annotation (if actively editing)
+        if (model.getCurrentTextAnnotation() != null) {
             handleTextInput(e);
         }
         // Handle text input for selected annotation (natural editing)
         else if (model.getSelectedObject() instanceof Annotation) {
             Annotation annotation = (Annotation) model.getSelectedObject();
+            model.setCurrentTextAnnotation(annotation);
             handleAnnotationTextInput(e, annotation);
-        }
-        // Handle text input for selected text block (natural editing)
-        else if (model.getSelectedObject() instanceof TextBlock) {
-            TextBlock textBlock = (TextBlock) model.getSelectedObject();
-            model.setCurrentTextBlock(textBlock);
-            handleTextInput(e);
         }
     }
     
@@ -357,44 +383,61 @@ public class PhotoComponent extends PACController {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // Delegate rendering to view
         boolean isFlipped = model.isFlipped();
         boolean annotationsVisible = model.isAnnotationsVisible();
         BufferedImage image = model.getImage();
         List<Stroke> strokes = model.getStrokes();
-        List<TextBlock> textBlocks = model.getTextBlocks();
         List<Annotation> annotations = model.getAnnotations();
-        TextBlock currentTextBlock = model.getCurrentTextBlock();
+        Annotation currentTextAnnotation = model.getCurrentTextAnnotation();
         Object selectedObject = model.getSelectedObject();
-        view.draw(g, this, isFlipped, annotationsVisible, image, strokes, textBlocks, annotations, currentTextBlock, selectedObject);
-        // Don't draw currentStroke during drawing to prevent selection issues
-        // The stroke will be drawn when it's added to the model after drawing is complete
+        view.draw(g, this, isFlipped, annotationsVisible, image, strokes, annotations, currentTextAnnotation, selectedObject);
     }
 
     @Override
     public Dimension getPreferredSize() {
+        // Delegate sizing to view
         BufferedImage image = model.getImage();
         return view.getPreferredSize(image);
     }
 
     public JMenuBar createMenuBar() {
-        return view.createMenuBar(this);
+        return view.createMenuBar();
     }
 
     public void importImage() {
-        view.showImportDialog(this);
+        // Handle import logic in controller
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Select Image File");
+        File imgDir = new File("img");
+        if (imgDir.exists()) {
+            fileChooser.setCurrentDirectory(imgDir);
+        }
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            loadImage(selectedFile);
+        }
     }
 
     public JPanel createToolBar() {
-        return view.createToolBar(this);
+        return view.createToolBar();
     }
 
     public void deletePhoto() {
+        // Clear model data
         model.clearAll();
+        // Reset controller state
+        resetControllerState();
+        // Refresh view
+        refreshView();
+    }
+    
+    private void resetControllerState() {
         currentStroke = null;
         isDrawing = false;
         mousePressed = false;
         mouseMoved = false;
-        refreshView();
     }
 
     public JPanel createStatusBar(){

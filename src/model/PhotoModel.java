@@ -14,8 +14,7 @@ public class PhotoModel implements IPhotoModel {
     private boolean annotationsVisible;
     private final List<Annotation> annotations;  
     private final List<Stroke> strokes;  
-    private final List<TextBlock> textBlocks;  
-    private TextBlock currentTextBlock;
+    private Annotation currentTextAnnotation;
     
     // Selection state
     private Object selectedObject;
@@ -28,8 +27,7 @@ public class PhotoModel implements IPhotoModel {
         this.annotationsVisible = true;
         this.annotations = new ArrayList<>();
         this.strokes = new ArrayList<>();
-        this.textBlocks = new ArrayList<>();
-        this.currentTextBlock = null;
+        this.currentTextAnnotation = null;
         this.selectedObject = null;
         this.isDragging = false;
         this.dragOffset = null;
@@ -114,52 +112,48 @@ public class PhotoModel implements IPhotoModel {
 
     public void setTextInsertionPoint(Point point) {
         if (point != null) {
-            currentTextBlock = new TextBlock(point);
-            textBlocks.add(currentTextBlock);
+            currentTextAnnotation = new Annotation(point);
+            annotations.add(currentTextAnnotation);
         } else {
-            // Clean up empty TextBlock if it exists
-            if (currentTextBlock != null && currentTextBlock.isEmpty()) {
-                textBlocks.remove(currentTextBlock);
+            // Clean up empty annotation if it exists
+            if (currentTextAnnotation != null && currentTextAnnotation.isEmpty()) {
+                annotations.remove(currentTextAnnotation);
             }
-            currentTextBlock = null;
+            currentTextAnnotation = null;
         }
     }
 
-    public void setCurrentTextBlock(TextBlock textBlock) {
-        this.currentTextBlock = textBlock;
+    public void setCurrentTextAnnotation(Annotation annotation) {
+        this.currentTextAnnotation = annotation;
     }
 
 
-    public TextBlock getCurrentTextBlock() {
-        return currentTextBlock;
-    }
-
-    public List<TextBlock> getTextBlocks() {
-        return new ArrayList<>(textBlocks);
+    public Annotation getCurrentTextAnnotation() {
+        return currentTextAnnotation;
     }
 
     public void addToCurrentText(char c) {
-        if (currentTextBlock != null) {
-            currentTextBlock.addCharacter(c);
+        if (currentTextAnnotation != null) {
+            currentTextAnnotation.addCharacter(c);
         }
     }
 
     public void backspaceCurrentText() {
-        if (currentTextBlock != null) {
-            currentTextBlock.backspace();
+        if (currentTextAnnotation != null) {
+            currentTextAnnotation.backspace();
         }
     }
 
     public void commitCurrentText() {
-        if (currentTextBlock != null) {
-            if (!currentTextBlock.isEmpty()) {
-                // Commit non-empty TextBlock
-                currentTextBlock.setCommitted(true);
+        if (currentTextAnnotation != null) {
+            if (!currentTextAnnotation.isEmpty()) {
+                // Commit non-empty annotation
+                currentTextAnnotation.setCommitted(true);
             } else {
-                // Remove empty TextBlock from the list
-                textBlocks.remove(currentTextBlock);
+                // Remove empty annotation from the list
+                annotations.remove(currentTextAnnotation);
             }
-            currentTextBlock = null;
+            currentTextAnnotation = null;
         }
     }
 
@@ -169,16 +163,14 @@ public class PhotoModel implements IPhotoModel {
         annotationsVisible = true;
         annotations.clear();
         strokes.clear();
-        textBlocks.clear();
-        currentTextBlock = null;
+        currentTextAnnotation = null;
         clearSelection();
     }
 
     public void clearAnnotations() {
         annotations.clear();
         strokes.clear();
-        textBlocks.clear();
-        currentTextBlock = null;
+        currentTextAnnotation = null;
     }
 
     public boolean hasImage() {

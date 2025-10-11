@@ -1,12 +1,10 @@
 package utils;
 
 import java.awt.*;
-import interfaces.IWordWrapper;
 import utils.TextUtils;
 
-public class WordWrapUtils implements IWordWrapper {
+public class WordWrapUtils {
     
-    @Override
     public int drawWrappedText(Graphics2D g2, FontMetrics fm, String text, int x, int y, int maxWidth) {
         String[] words = text.split(" ");
         TextUtils textUtils = new TextUtils();
@@ -39,7 +37,6 @@ public class WordWrapUtils implements IWordWrapper {
         return y;
     }
     
-    @Override
     public int drawCurrentLineAndAdvance(Graphics2D g2, FontMetrics fm, int x, int y, 
                                        StringBuilder currentLine, int lineHeight, int maxWidth) {
         if (currentLine.length() > 0) {
@@ -50,7 +47,6 @@ public class WordWrapUtils implements IWordWrapper {
         }
     }
     
-    @Override
     public int drawLongWord(Graphics2D g2, FontMetrics fm, int x, int y, int lineHeight, int maxWidth, String word) {
         String remainingWord = word;
         

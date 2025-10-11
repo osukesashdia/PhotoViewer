@@ -2,11 +2,10 @@ package utils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import interfaces.ITextRenderer;
 import utils.Constants;
 import utils.WordWrapUtils;
 
-public class TextUtils implements ITextRenderer {
+public class TextUtils {
     
     public static Font createFont(int style) {
         return new Font(Constants.FONT_NAME, style, Constants.FONT_SIZE);
@@ -16,28 +15,23 @@ public class TextUtils implements ITextRenderer {
         return new Font(Constants.FONT_NAME, Font.BOLD, Constants.FONT_SIZE_BOLD);
     }
     
-    @Override
     public void setupFont(Graphics2D g2) {
         g2.setFont(createFont(Font.PLAIN));
     }
     
-    @Override
     public int calculateLineHeight(FontMetrics fm) {
         return fm.getAscent() + fm.getDescent() + fm.getLeading();
     }
     
-    @Override
     public int calculateMaxWidth(int photoWidth, int x) {
         return photoWidth - x - Constants.TEXT_MARGIN;
     }
     
-    @Override
     public void drawCursor(Graphics2D g2, FontMetrics fm, int x, int y) {
         g2.setStroke(new java.awt.BasicStroke(Constants.CURSOR_STROKE_WIDTH));
         g2.drawLine(x, y - fm.getAscent(), x, y);
     }
     
-    @Override
     public void drawCursorAtEnd(Graphics2D g2, FontMetrics fm, int x, int y, String text) {
         int textWidth = fm.stringWidth(text);
         int cursorX = x + textWidth;
@@ -47,7 +41,6 @@ public class TextUtils implements ITextRenderer {
     }
 
     // Text bounds calculation methods
-    @Override
     public Rectangle calculateTextBounds(FontMetrics fm, String text, int x, int y, int maxWidth) {
         if (text == null || text.isEmpty()) {
             return new Rectangle(x, y - fm.getAscent(), 0, fm.getHeight());

@@ -6,24 +6,45 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.io.File;
-import interfaces.IPhotoView;
-import interfaces.IDrawingRenderer;
-import model.TextBlock;
-import model.Stroke;
-import model.Annotation;
-import controller.PhotoComponent;
+// Removed model imports - view should not know about model classes
+import java.util.function.Consumer;
 import utils.Constants;
 import utils.DrawingUtils;
 import utils.TextUtils;
 
-public class PhotoView implements IPhotoView {
-    private final IDrawingRenderer drawingRenderer = new DrawingUtils();
+public class PhotoView {
+    private final DrawingUtils drawingRenderer = new DrawingUtils();
+    private final AnnotationRenderer annotationRenderer = new AnnotationRenderer();
+    private final StrokeRenderer strokeRenderer = new StrokeRenderer();
+    
+    // Event listeners
+    private java.awt.event.ActionListener importActionListener;
+    private java.awt.event.ActionListener deleteActionListener;
+    private java.awt.event.ActionListener colorActionListener;
+    private Consumer<String> statusUpdateListener;
     
     public PhotoView() {
     }
 
+    // Event listener setters
+    public void setImportActionListener(java.awt.event.ActionListener listener) {
+        this.importActionListener = listener;
+    }
+    
+    public void setDeleteActionListener(java.awt.event.ActionListener listener) {
+        this.deleteActionListener = listener;
+    }
+    
+    public void setColorActionListener(java.awt.event.ActionListener listener) {
+        this.colorActionListener = listener;
+    }
+    
+    public void setStatusUpdateListener(Consumer<String> listener) {
+        this.statusUpdateListener = listener;
+    }
+
     public void draw(Graphics g, JComponent c, boolean isFlipped, boolean annotationsVisible, BufferedImage image, 
-                    List<Stroke> strokes, List<TextBlock> textBlocks, List<Annotation> annotations, TextBlock currentTextBlock, Object selectedObject) {
+                    List<?> strokes, List<?> annotations, Object currentTextAnnotation, Object selectedObject) {
         Graphics2D g2 = (Graphics2D) g.create();
 
         try {
@@ -36,15 +57,13 @@ public class PhotoView implements IPhotoView {
                 drawPhotoBack(g2, c, image);
                 if (annotationsVisible) {
                     drawStrokes(g2, strokes, selectedObject);
-                    drawTextBlocks(g2, textBlocks, image, currentTextBlock, selectedObject);
-                    drawAnnotations(g2, annotations, image, selectedObject);
+                    drawAnnotations(g2, annotations, image, currentTextAnnotation, selectedObject);
                 }
                 } else {
                 drawPhoto(g2, c, image, isFlipped);
                 if (annotationsVisible) {
                     drawStrokes(g2, strokes, selectedObject);
-                    drawTextBlocks(g2, textBlocks, image, currentTextBlock, selectedObject);
-                    drawAnnotations(g2, annotations, image, selectedObject);
+                    drawAnnotations(g2, annotations, image, currentTextAnnotation, selectedObject);
                 }
             }
         } finally {
@@ -81,13 +100,14 @@ public class PhotoView implements IPhotoView {
         drawingRenderer.drawWhiteSurface(g2, surfaceWidth, surfaceHeight);
     }
 
-    private void drawStrokes(Graphics2D g2, List<Stroke> strokes, Object selectedObject) {
-        for (Stroke stroke : strokes) {
-            stroke.draw(g2);
+    private void drawStrokes(Graphics2D g2, List<?> strokes, Object selectedObject) {
+        for (Object stroke : strokes) {
+            strokeRenderer.drawStroke(g2, stroke);
         }
     }
 
-    private void drawTextBlocks(Graphics2D g2, List<TextBlock> textBlocks, BufferedImage image, TextBlock currentTextBlock, Object selectedObject) {
+
+    private void drawAnnotations(Graphics2D g2, List<?> annotations, BufferedImage image, Object currentTextAnnotation, Object selectedObject) {
         int surfaceWidth, surfaceHeight;
         if (image != null) {
             surfaceWidth = image.getWidth();
@@ -98,31 +118,15 @@ public class PhotoView implements IPhotoView {
         }
         
         g2.setClip(0, 0, surfaceWidth, surfaceHeight);
-        for (TextBlock textBlock : textBlocks) {
-            // Only draw non-empty TextBlocks
-            if (!textBlock.isEmpty()) {
-                textBlock.draw(g2, surfaceWidth, textBlock == currentTextBlock);
-            }
-        }
-    }
-
-    private void drawAnnotations(Graphics2D g2, List<Annotation> annotations, BufferedImage image, Object selectedObject) {
-        int surfaceWidth, surfaceHeight;
-        if (image != null) {
-            surfaceWidth = image.getWidth();
-            surfaceHeight = image.getHeight();
-        } else {
-            surfaceWidth = Constants.DEFAULT_WIDTH;
-            surfaceHeight = Constants.DEFAULT_HEIGHT;
-        }
-        
-        g2.setClip(0, 0, surfaceWidth, surfaceHeight);
-        for (Annotation annotation : annotations) {
+        for (Object annotation : annotations) {
             // Only draw non-empty annotations
-            if (!annotation.isEmpty()) {
-                annotation.draw(g2, surfaceWidth);
+            if (!isEmpty(annotation)) {
+                // Use AnnotationRenderer for all annotations
+                boolean isActive = (annotation == currentTextAnnotation);
+                annotationRenderer.drawAnnotation(g2, annotation, surfaceWidth);
+                
                 // Draw editing cursor if this annotation is being edited
-                if (annotation == selectedObject && annotation.isEditing()) {
+                if (annotation == selectedObject && isEditing(annotation)) {
                     drawEditingCursor(g2, annotation);
                 }
             }
@@ -130,21 +134,51 @@ public class PhotoView implements IPhotoView {
     }
 
 
-    private Rectangle getStrokeBounds(Stroke stroke) {
+    private Rectangle getStrokeBounds(Object stroke) {
         // This is a simplified bounding box calculation
         // In a real implementation, you'd want to calculate the actual bounds
-        Point center = stroke.getCenter();
-        return new Rectangle(center.x - 50, center.y - 10, 100, 20);
+        try {
+            Point center = (Point) stroke.getClass().getMethod("getCenter").invoke(stroke);
+            return new Rectangle(center.x - 50, center.y - 10, 100, 20);
+        } catch (Exception e) {
+            // Fallback to a default bounds if reflection fails
+            return new Rectangle(0, 0, 100, 20);
+        }
     }
 
 
-    private void drawEditingCursor(Graphics2D g2, Annotation annotation) {
+    private void drawEditingCursor(Graphics2D g2, Object annotation) {
         g2.setColor(Color.BLUE);
         g2.setStroke(new java.awt.BasicStroke(1.0f));
-        Point pos = annotation.getPosition();
+        Point pos = getPosition(annotation);
         // Draw a simple cursor at the end of the text
         int cursorX = pos.x + 100; // Approximate end of text
         g2.drawLine(cursorX, pos.y - 15, cursorX, pos.y + 5);
+    }
+    
+    // Helper methods to access object data without knowing the model class
+    private boolean isEmpty(Object obj) {
+        try {
+            return (Boolean) obj.getClass().getMethod("isEmpty").invoke(obj);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+    
+    private boolean isEditing(Object obj) {
+        try {
+            return (Boolean) obj.getClass().getMethod("isEditing").invoke(obj);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    private Point getPosition(Object obj) {
+        try {
+            return (Point) obj.getClass().getMethod("getPosition").invoke(obj);
+        } catch (Exception e) {
+            return new Point(0, 0);
+        }
     }
 
     public Dimension getPreferredSize(BufferedImage image) {
@@ -154,32 +188,40 @@ public class PhotoView implements IPhotoView {
         return new Dimension(Constants.DEFAULT_WIDTH, Constants.DEFAULT_HEIGHT);
     }
 
-    public JMenuBar createMenuBar(PhotoComponent controller) {
+    public JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        menuBar.add(createFileMenu(controller));
+        menuBar.add(createFileMenu());
         menuBar.add(createViewMenu());
         return menuBar;
     }
     
-    private JMenu createFileMenu(PhotoComponent controller) {
+    private JMenu createFileMenu() {
         JMenu fileMenu = new JMenu("File");
         
-        fileMenu.add(createImportMenuItem(controller));
-        fileMenu.add(createDeleteMenuItem(controller));
+        fileMenu.add(createImportMenuItem());
+        fileMenu.add(createDeleteMenuItem());
         fileMenu.add(createQuitMenuItem());
         
         return fileMenu;
     }
     
-    private JMenuItem createImportMenuItem(PhotoComponent controller) {
+    private JMenuItem createImportMenuItem() {
         JMenuItem importItem = new JMenuItem("Import");
-        importItem.addActionListener(e -> controller.importImage());
+        importItem.addActionListener(e -> {
+            if (importActionListener != null) {
+                importActionListener.actionPerformed(e);
+            }
+        });
         return importItem;
     }
     
-    private JMenuItem createDeleteMenuItem(PhotoComponent controller) {
+    private JMenuItem createDeleteMenuItem() {
         JMenuItem deleteItem = new JMenuItem("Delete");
-        deleteItem.addActionListener(e -> controller.deletePhoto());
+        deleteItem.addActionListener(e -> {
+            if (deleteActionListener != null) {
+                deleteActionListener.actionPerformed(e);
+            }
+        });
         return deleteItem;
     }
     
@@ -219,15 +261,14 @@ public class PhotoView implements IPhotoView {
         return browseItem;
     }
 
-    public JPanel createToolBar(PhotoComponent controller) {
+    public JPanel createToolBar() {
         JPanel toolBarPanel = new JPanel();
         
         // Color chooser button
         JButton colorButton = new JButton("Color");
         colorButton.addActionListener(e -> {
-            Color selectedColor = JColorChooser.showDialog(toolBarPanel, "Choose Annotation Color", Color.BLACK);
-            if (selectedColor != null) {
-                controller.setAnnotationColor(selectedColor);
+            if (colorActionListener != null) {
+                colorActionListener.actionPerformed(e);
             }
         });
         toolBarPanel.add(colorButton);
@@ -237,7 +278,9 @@ public class PhotoView implements IPhotoView {
         for (String category : categories) {
             JToggleButton categoryToggleButton = new JToggleButton(category);
             categoryToggleButton.addActionListener(e -> {
-                updateStatusBar(toolBarPanel, category + " button clicked");
+                if (statusUpdateListener != null) {
+                    statusUpdateListener.accept(category + " button clicked");
+                }
             });
             toolBarPanel.add(categoryToggleButton);
         }
@@ -255,44 +298,6 @@ public class PhotoView implements IPhotoView {
         return statusBar;
     }
 
-    private void updateStatusBar(JPanel toolBarPanel, String message) {
-        JComponent parent = (JComponent) toolBarPanel.getParent();
-        while (parent != null) {
-            JLabel statusLabel = findStatusLabel(parent);
-            if (statusLabel != null) {
-                statusLabel.setText(message);
-                break;
-            }
-            parent = (JComponent) parent.getParent();
-        }
-    }
 
-    private JLabel findStatusLabel(Container container) {
-        for (Component comp : container.getComponents()) {
-            if (comp instanceof JLabel && "statusLabel".equals(comp.getName())) {
-                return (JLabel) comp;
-            } else if (comp instanceof Container) {
-                JLabel found = findStatusLabel((Container) comp);
-                if (found != null) {
-                    return found;
-                }
-            }
-        }
-        return null;
-    }
-
-    public void showImportDialog(PhotoComponent controller) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Select Image File");
-        File imgDir = new File("img");
-        if (imgDir.exists()) {
-            fileChooser.setCurrentDirectory(imgDir);
-        }
-        int result = fileChooser.showOpenDialog(controller);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            controller.loadImage(selectedFile);
-        }
-    }
     
 }
